@@ -71,7 +71,7 @@
           <i class="ti ti-concierge-desk text-2xl"></i>
         </div>
         <h3 class="text-2xl font-bold text-stone-900 group-hover:text-amber-800 transition-colors">Front Desk Reception</h3>
-        <p class="text-stone-500 text-sm mt-2">File fresh guest maintenance incidents, select issue urgencies, and view logging updates.</p>
+        <p class="text-stone-500 text-sm mt-2">File fresh guest maintenance incidents, select issue urgencies, and compile shift audit histories.</p>
         <div class="mt-6 inline-flex items-center text-sm font-semibold text-amber-700 group-hover:translate-x-1 transition-transform">
           Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
         </div>
@@ -82,7 +82,7 @@
           <i class="ti ti-tools text-2xl"></i>
         </div>
         <h3 class="text-2xl font-bold text-stone-900 group-hover:text-emerald-800 transition-colors">Maintenance Engineering</h3>
-        <p class="text-stone-500 text-sm mt-2">Track room alerts backlog, view logged timings, and instantly process completed tickets.</p>
+        <p class="text-stone-500 text-sm mt-2">Track room alerts backlog, view absolute logging timestamps, and instantly close jobs.</p>
         <div class="mt-6 inline-flex items-center text-sm font-semibold text-emerald-700 group-hover:translate-x-1 transition-transform">
           Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
         </div>
@@ -108,57 +108,92 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <section class="lg:col-span-4 space-y-6">
-        <div id="panel-reception-form" class="bg-white border border-stone-200/80 rounded-3xl p-6 shadow-sm hidden">
-          <div class="border-b border-stone-100 pb-4 mb-5">
-            <h3 class="text-xl font-bold text-stone-900">Log New Maintenance Item</h3>
-            <p class="text-xs text-stone-500 mt-0.5">Dispatches real-time room notifications immediately.</p>
+        
+        <div id="panel-reception-form" class="space-y-6 hidden">
+          <div class="bg-white border border-stone-200/80 rounded-3xl p-6 shadow-sm">
+            <div class="border-b border-stone-100 pb-4 mb-5">
+              <h3 class="text-xl font-bold text-stone-900">Log New Maintenance Item</h3>
+              <p class="text-xs text-stone-500 mt-0.5">Dispatches live room notifications immediately upon registration.</p>
+            </div>
+
+            <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+              <div>
+                <label for="guest_name" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Guest Full Name</label>
+                <div class="relative">
+                  <i class="ti ti-user absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
+                  <input type="text" id="guest_name" required placeholder="e.g. John Doe" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+              </div>
+
+              <div>
+                <label for="room_number" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Room / Suite Number</label>
+                <div class="relative">
+                  <i class="ti ti-key absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
+                  <input type="text" id="room_number" required placeholder="e.g. 402" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+              </div>
+
+              <div>
+                <label for="issue_category" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Urgency Category</label>
+                <div class="relative">
+                  <i class="ti ti-category absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
+                  <select id="issue_category" required class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <option value="" disabled selected>Select issue category</option>
+                    <option value="Toilet">🚽 Toilet / Plumbing</option>
+                    <option value="AC">❄️ AC / Air Conditioning</option>
+                    <option value="Carpet">🧹 Carpet / Cleaning</option>
+                    <option value="Wood">🪚 Wood / Carpentry</option>
+                    <option value="Tiles">🧱 Tiles / Masonry</option>
+                    <option value="Painting">🎨 Painting / Walls</option>
+                    <option value="Room Smell">💨 Room Smell / Ventilation</option>
+                    <option value="Electricity">⚡ Electricity / Lights</option>
+                  </select>
+                  <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none text-base"></i>
+                </div>
+              </div>
+
+              <div>
+                <label for="notes" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Issue Details / Structural Notes</label>
+                <textarea id="notes" rows="3" placeholder="Provide additional details regarding the mechanical error..." class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+              </div>
+
+              <button type="submit" id="submit-btn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
+                <i class="ti ti-plus text-base"></i> <span>File Active Request</span>
+              </button>
+            </form>
           </div>
 
-          <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
-            <div>
-              <label for="guest_name" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Guest Full Name</label>
-              <div class="relative">
-                <i class="ti ti-user absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                <input type="text" id="guest_name" required placeholder="e.g. John Doe" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
+          <div class="bg-white border border-stone-200/80 rounded-3xl p-6 shadow-sm">
+            <div class="border-b border-stone-100 pb-4 mb-5">
+              <h3 class="text-xl font-bold text-stone-900">Manager Shift Report</h3>
+              <p class="text-xs text-stone-500 mt-0.5">Filter operations by an absolute date parameters index timeline.</p>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Select Operating Audit Date</label>
+                <input type="date" id="report-date-input" class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+              <button onclick="generateManagerReport()" class="w-full bg-stone-900 hover:bg-stone-800 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
+                <i class="ti ti-file-text text-base"></i> <span>Compile Activity Log</span>
+              </button>
+              <button onclick="loadTodayRequests()" id="clear-report-btn" class="w-full text-stone-500 font-medium py-2 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 transition-all text-xs hidden">
+                ← Return to Live Tracking View
+              </button>
+            </div>
+
+            <div id="report-summary-output" class="mt-5 pt-4 border-t border-stone-100 hidden space-y-3">
+              <div class="grid grid-cols-2 gap-3 text-center font-mono text-xs">
+                <div class="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100">
+                  <p class="font-sans text-[10px] text-emerald-600 uppercase font-bold tracking-wider">Fixed Tickets</p>
+                  <p id="report-fixed-count" class="text-2xl font-bold mt-1">0</p>
+                </div>
+                <div class="p-3 bg-amber-50 text-amber-800 rounded-xl border border-amber-100">
+                  <p class="font-sans text-[10px] text-amber-600 uppercase font-bold tracking-wider">Left Pending</p>
+                  <p id="report-pending-count" class="text-2xl font-bold mt-1">0</p>
+                </div>
               </div>
             </div>
-
-            <div>
-              <label for="room_number" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Room / Suite Number</label>
-              <div class="relative">
-                <i class="ti ti-key absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                <input type="text" id="room_number" required placeholder="e.g. 402" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
-              </div>
-            </div>
-
-            <div>
-              <label for="issue_category" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Urgency Category</label>
-              <div class="relative">
-                <i class="ti ti-category absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                <select id="issue_category" required class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm appearance-none cursor-pointer">
-                  <option value="" disabled selected>Select issue category</option>
-                  <option value="Toilet">🚽 Toilet / Plumbing</option>
-                  <option value="AC">❄️ AC / Air Conditioning</option>
-                  <option value="Carpet">🧹 Carpet / Cleaning</option>
-                  <option value="Wood">🪚 Wood / Carpentry</option>
-                  <option value="Tiles">🧱 Tiles / Masonry</option>
-                  <option value="Painting">🎨 Painting / Walls</option>
-                  <option value="Room Smell">💨 Room Smell / Ventilation</option>
-                  <option value="Electricity">⚡ Electricity / Lights</option>
-                </select>
-                <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none text-base"></i>
-              </div>
-            </div>
-
-            <div>
-              <label for="notes" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Issue Details / Structural Notes</label>
-              <textarea id="notes" rows="3" placeholder="Provide additional details regarding the error..." class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm resize-none"></textarea>
-            </div>
-
-            <button type="submit" id="submit-btn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
-              <i class="ti ti-plus text-base"></i> <span>File Active Request</span>
-            </button>
-          </form>
+          </div>
         </div>
 
         <div id="panel-maintenance-stats" class="bg-stone-900 text-white rounded-3xl p-6 shadow-xl space-y-6 hidden relative overflow-hidden">
@@ -199,8 +234,8 @@
                 <i class="ti ti-layout-list"></i>
               </div>
               <div>
-                <h3 class="text-lg font-bold text-stone-900">Active Tracking Logs</h3>
-                <p class="text-xs text-stone-500">Live operational requests and absolute system time logs.</p>
+                <h3 id="queue-main-title" class="text-lg font-bold text-stone-900">Active Tracking Logs</h3>
+                <p class="text-xs text-stone-500">Live request processing pipelines with absolute logging time metrics.</p>
               </div>
             </div>
             <span id="queue-count-badge" class="px-2.5 py-1 bg-stone-100 border border-stone-200 font-mono text-xs text-stone-600 font-bold rounded-full">0 Pending</span>
@@ -208,7 +243,7 @@
 
           <div id="requests-container" class="divide-y divide-stone-100 min-h-[300px] flex flex-col">
             <div class="flex-1 flex flex-col items-center justify-center text-center p-12 text-stone-400">
-              <p class="text-sm font-medium text-stone-500">Connecting to logging queue database...</p>
+              <p class="text-sm font-medium text-stone-500">Connecting to tracking logging clusters...</p>
             </div>
           </div>
         </div>
@@ -223,7 +258,7 @@
       requests: []
     };
 
-    /* ── Helper: Humanize Date/Time formatting ── */
+    /* ── Humanize Date & Time Formatting engine fallback logic ── */
     function formatDateTime(isoString) {
       if (!isoString) return 'N/A';
       const dateObj = new Date(isoString);
@@ -240,7 +275,7 @@
 
       AppState.socket.on('connect', () => {
         statusIndicator.className = "flex items-center space-x-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200/60 text-emerald-700";
-        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Live Sync</span>`;
+        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Live Pipeline Sync</span>`;
         if (AppState.role) AppState.socket.emit('register_role', AppState.role);
       });
 
@@ -250,8 +285,12 @@
       });
 
       AppState.socket.on('new_request', (request) => {
-        AppState.requests.unshift(request);
-        renderRequests();
+        // Only accept real-time shifts if not auditing old management archives reports
+        const reportBtn = document.getElementById('clear-report-btn');
+        if (reportBtn && reportBtn.classList.contains('hidden')) {
+          AppState.requests.unshift(request);
+          renderRequests();
+        }
         triggerAudioChime();
       });
 
@@ -259,9 +298,12 @@
         const target = AppState.requests.find(r => r.id === updatedRequest.id);
         if (target) {
           target.status = 'completed';
-          target.completedAt = updatedRequest.completedAt;
+          target.completedAt = updatedRequest.completedAt; // Seamless synchronized camelCase integration
         } else {
-          AppState.requests.push(updatedRequest);
+          const reportBtn = document.getElementById('clear-report-btn');
+          if (reportBtn && reportBtn.classList.contains('hidden')) {
+            AppState.requests.push(updatedRequest);
+          }
         }
         renderRequests();
         triggerAudioChime();
@@ -274,6 +316,11 @@
     }
 
     async function loadTodayRequests() {
+      // Clean view state contexts parameters overrides
+      document.getElementById('report-summary-output').classList.add('hidden');
+      document.getElementById('clear-report-btn').classList.add('hidden');
+      document.getElementById('queue-main-title').textContent = "Active Tracking Logs";
+
       try {
         const response = await fetch('/api/requests/today');
         if (!response.ok) throw new Error('Database pipeline transmission dropped.');
@@ -281,7 +328,38 @@
         AppState.requests.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
         renderRequests();
       } catch (err) {
-        console.error("Pipeline failure:", err);
+        console.error("Pipeline load error:", err);
+      }
+    }
+
+    /* ── Manager Shift Report Query Engine ── */
+    async function generateManagerReport() {
+      const dateInput = document.getElementById('report-date-input').value;
+      if (!dateInput) {
+        alert("Please select a specific operations calendar date first!");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/reports?date=${dateInput}`);
+        if (!response.ok) throw new Error("Could not retrieve report logs for the selected day.");
+        
+        const data = await response.json();
+        
+        // Render UI blocks summary indicators cards metrics boxes panel elements
+        document.getElementById('report-summary-output').classList.remove('hidden');
+        document.getElementById('clear-report-btn').classList.remove('hidden');
+        document.getElementById('report-fixed-count').textContent = data.metrics.fixed;
+        document.getElementById('report-pending-count').textContent = data.metrics.pending;
+
+        // Isolate queue table layout completely to display historical dataset target
+        document.getElementById('queue-main-title').textContent = `Archived Shift Audit Report`;
+        document.getElementById('queue-count-badge').textContent = `Date: ${dateInput}`;
+
+        AppState.requests = data.requests;
+        renderRequests();
+      } catch (err) {
+        alert(err.message);
       }
     }
 
@@ -305,7 +383,7 @@
           body: JSON.stringify(requestData)
         });
 
-        if (!response.ok) throw new Error('Submission rejected.');
+        if (!response.ok) throw new Error('Form execution request processing parameters error.');
         document.getElementById('request-form').reset();
       } catch (err) {
         alert(err.message);
@@ -321,7 +399,7 @@
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' }
         });
-        if (!response.ok) throw new Error('PATCH action request execution failed.');
+        if (!response.ok) throw new Error('PATCH target state action mutation error.');
       } catch (err) {
         alert(err.message);
         btnElement.disabled = false;
@@ -333,7 +411,12 @@
       const badgeCount = document.getElementById('queue-count-badge');
       
       const pendingItems = AppState.requests.filter(r => r.status === 'pending');
-      badgeCount.textContent = `${pendingItems.length} Pending`;
+      
+      // Update counts badges conditionally based on if report viewing or live tracker views are active
+      const reportBtn = document.getElementById('clear-report-btn');
+      if (reportBtn && reportBtn.classList.contains('hidden')) {
+        badgeCount.textContent = `${pendingItems.length} Pending`;
+      }
       
       const sActive = document.getElementById('stat-active');
       const sDone = document.getElementById('stat-done');
@@ -341,14 +424,14 @@
       if (sDone) sDone.textContent = AppState.requests.filter(r => r.status === 'completed').length;
 
       if (AppState.requests.length === 0) {
-        container.innerHTML = `<div class="p-16 text-center text-stone-400">No logs managed today.</div>`;
+        container.innerHTML = `<div class="p-16 text-center text-stone-400 text-sm font-medium">No operational request entries match this tracking viewport filter.</div>`;
         return;
       }
 
       container.innerHTML = AppState.requests.map(req => {
         const isPending = req.status === 'pending';
         const loggedTimeFormatted = formatDateTime(req.timestamp);
-        const completedTimeFormatted = formatDateTime(req.completedAt);
+        const completedTimeFormatted = formatDateTime(req.completedAt); // Seamless camelCase execution display
 
         const catMap = {
           Toilet: 'bg-blue-50 text-blue-700 border-blue-200/50',
