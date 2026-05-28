@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hotel Maintenance System</title>
+  <title>WH Hotel Maintenance System</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -16,7 +16,6 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <script>
-    /* ── Tailwind Config ─────────────────────────────────── */
     tailwind.config = {
       theme: {
         extend: {
@@ -44,14 +43,14 @@
       </div>
       <div>
         <h1 class="text-xl font-bold tracking-tight text-stone-900">WH Hotel</h1>
-        <p class="text-xs font-mono uppercase tracking-wider text-stone-500">Maintenance Request Desk</p>
+        <p class="text-xs font-mono uppercase tracking-wider text-stone-500">Maintenance Operations Hub</p>
       </div>
     </div>
 
     <div class="flex items-center space-x-6">
       <div class="text-right">
-        <p id="live-date" class="text-sm font-medium text-stone-800">Thursday, May 28</p>
-        <p id="live-clock" class="text-xs font-mono text-stone-500">12:00:00 PM</p>
+        <p id="live-date" class="text-sm font-medium text-stone-800">---</p>
+        <p id="live-clock" class="text-xs font-mono text-stone-500">00:00:00 PM</p>
       </div>
       <div id="connection-status" class="flex items-center space-x-2 bg-stone-100 px-3 py-1.5 rounded-full border border-stone-200">
         <span class="h-2 w-2 rounded-full bg-stone-300 animate-pulse"></span>
@@ -63,27 +62,27 @@
   <main id="screen-role-select" class="max-w-2xl mx-auto px-6 py-20 text-center">
     <div class="space-y-4 mb-12">
       <h2 class="text-4xl font-bold text-stone-900 tracking-tight sm:text-5xl">Select Workspace Dashboard</h2>
-      <p class="text-stone-500 max-w-md mx-auto">Please select your operating role to sync real-time tasks with the system pipeline.</p>
+      <p class="text-stone-500 max-w-md mx-auto">Please choose your operational interface to interact with real-time maintenance requests.</p>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-      <button onclick="selectRole('reception')" class="group text-left p-8 bg-white border border-stone-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-amber-600/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
+      <button onclick="selectRole('reception')" class="group text-left p-8 bg-white border border-stone-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-amber-600/30 transition-all duration-300">
         <div class="h-14 w-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 mb-6 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300">
           <i class="ti ti-concierge-desk text-2xl"></i>
         </div>
         <h3 class="text-2xl font-bold text-stone-900 group-hover:text-amber-800 transition-colors">Front Desk Reception</h3>
-        <p class="text-stone-500 text-sm mt-2">Log guest issues, select urgency categories, track repair statuses, and communicate real-time needs immediately.</p>
+        <p class="text-stone-500 text-sm mt-2">File fresh guest maintenance incidents, select issue urgencies, and view logging updates.</p>
         <div class="mt-6 inline-flex items-center text-sm font-semibold text-amber-700 group-hover:translate-x-1 transition-transform">
           Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
         </div>
       </button>
 
-      <button onclick="selectRole('maintenance')" class="group text-left p-8 bg-white border border-stone-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-emerald-600/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+      <button onclick="selectRole('maintenance')" class="group text-left p-8 bg-white border border-stone-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-emerald-600/30 transition-all duration-300">
         <div class="h-14 w-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
           <i class="ti ti-tools text-2xl"></i>
         </div>
         <h3 class="text-2xl font-bold text-stone-900 group-hover:text-emerald-800 transition-colors">Maintenance Engineering</h3>
-        <p class="text-stone-500 text-sm mt-2">Receive active room alerts, monitor assignment queue metrics, resolve work tickets, and push real-time resolutions.</p>
+        <p class="text-stone-500 text-sm mt-2">Track room alerts backlog, view logged timings, and instantly process completed tickets.</p>
         <div class="mt-6 inline-flex items-center text-sm font-semibold text-emerald-700 group-hover:translate-x-1 transition-transform">
           Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
         </div>
@@ -92,7 +91,6 @@
   </main>
 
   <main id="screen-dashboard" class="max-w-7xl mx-auto px-6 py-8 hidden">
-    
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-200 pb-6 mb-8 gap-4">
       <div>
         <div class="flex items-center space-x-2 text-stone-500 text-sm mb-1">
@@ -109,13 +107,11 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      
       <section class="lg:col-span-4 space-y-6">
-        
         <div id="panel-reception-form" class="bg-white border border-stone-200/80 rounded-3xl p-6 shadow-sm hidden">
           <div class="border-b border-stone-100 pb-4 mb-5">
             <h3 class="text-xl font-bold text-stone-900">Log New Maintenance Item</h3>
-            <p class="text-xs text-stone-500 mt-0.5">Dispatches real-time room notifications immediately upon submission.</p>
+            <p class="text-xs text-stone-500 mt-0.5">Dispatches real-time room notifications immediately.</p>
           </div>
 
           <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
@@ -123,7 +119,7 @@
               <label for="guest_name" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Guest Full Name</label>
               <div class="relative">
                 <i class="ti ti-user absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                <input type="text" id="guest_name" required placeholder="e.g. John Doe" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm" />
+                <input type="text" id="guest_name" required placeholder="e.g. John Doe" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
               </div>
             </div>
 
@@ -131,7 +127,7 @@
               <label for="room_number" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Room / Suite Number</label>
               <div class="relative">
                 <i class="ti ti-key absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                <input type="text" id="room_number" required placeholder="e.g. 402, PH-A" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm" />
+                <input type="text" id="room_number" required placeholder="e.g. 402" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
               </div>
             </div>
 
@@ -139,7 +135,7 @@
               <label for="issue_category" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Urgency Category</label>
               <div class="relative">
                 <i class="ti ti-category absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                <select id="issue_category" required class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm appearance-none cursor-pointer">
+                <select id="issue_category" required class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm appearance-none cursor-pointer">
                   <option value="" disabled selected>Select issue category</option>
                   <option value="Toilet">🚽 Toilet / Plumbing</option>
                   <option value="AC">❄️ AC / Air Conditioning</option>
@@ -156,10 +152,10 @@
 
             <div>
               <label for="notes" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Issue Details / Structural Notes</label>
-              <textarea id="notes" rows="3" placeholder="Provide additional details regarding the mechanical error..." class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm resize-none"></textarea>
+              <textarea id="notes" rows="3" placeholder="Provide additional details regarding the error..." class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm resize-none"></textarea>
             </div>
 
-            <button type="submit" id="submit-btn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-xl shadow-md shadow-amber-600/10 hover:shadow-lg hover:shadow-amber-600/20 active:translate-y-[1px] transition-all flex items-center justify-center space-x-2 text-sm mt-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
+            <button type="submit" id="submit-btn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
               <i class="ti ti-plus text-base"></i> <span>File Active Request</span>
             </button>
           </form>
@@ -167,10 +163,9 @@
 
         <div id="panel-maintenance-stats" class="bg-stone-900 text-white rounded-3xl p-6 shadow-xl space-y-6 hidden relative overflow-hidden">
           <div class="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-emerald-600/10 blur-2xl"></div>
-          
           <div class="border-b border-stone-800 pb-4">
             <h3 class="text-xl font-bold text-white tracking-tight">Pipeline Control</h3>
-            <p class="text-xs text-stone-400 mt-0.5 font-mono uppercase tracking-wider">Live Engineering Data</p>
+            <p class="text-xs text-stone-400 font-mono uppercase tracking-wider">Live Engineering Data</p>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
@@ -185,19 +180,18 @@
           </div>
 
           <div class="bg-stone-800/40 border border-stone-800 rounded-2xl p-4 flex items-center space-x-3.5">
-            <div class="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-lg border border-emerald-500/20">
+            <div class="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-lg">
               <i class="ti ti-users"></i>
             </div>
             <div>
-              <p class="text-xs text-stone-400 font-medium uppercase tracking-wider">Active Workspace Sessions</p>
-              <p id="stat-clients" class="text-sm font-semibold font-mono text-white mt-0.5">1 Hub Member Connected</p>
+              <p class="text-xs text-stone-400 font-medium uppercase tracking-wider">Active Core Connections</p>
+              <p id="stat-clients" class="text-sm font-semibold font-mono text-white mt-0.5">1 Session Connected</p>
             </div>
           </div>
         </div>
       </section>
 
       <section class="lg:col-span-8 space-y-6">
-        
         <div class="bg-white border border-stone-200/80 rounded-3xl shadow-sm overflow-hidden">
           <div class="px-6 py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
             <div class="flex items-center space-x-2.5">
@@ -205,8 +199,8 @@
                 <i class="ti ti-layout-list"></i>
               </div>
               <div>
-                <h3 class="text-lg font-bold text-stone-900">Active Structural Tickets</h3>
-                <p class="text-xs text-stone-500">Live operational queues sync automatically across instances.</p>
+                <h3 class="text-lg font-bold text-stone-900">Active Tracking Logs</h3>
+                <p class="text-xs text-stone-500">Live operational requests and absolute system time logs.</p>
               </div>
             </div>
             <span id="queue-count-badge" class="px-2.5 py-1 bg-stone-100 border border-stone-200 font-mono text-xs text-stone-600 font-bold rounded-full">0 Pending</span>
@@ -214,10 +208,7 @@
 
           <div id="requests-container" class="divide-y divide-stone-100 min-h-[300px] flex flex-col">
             <div class="flex-1 flex flex-col items-center justify-center text-center p-12 text-stone-400">
-              <div class="h-12 w-12 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center mb-3 text-stone-400 animate-pulse">
-                <i class="ti ti-refresh text-xl animate-spin"></i>
-              </div>
-              <p class="text-sm font-medium text-stone-500">Fetching live tracking log database...</p>
+              <p class="text-sm font-medium text-stone-500">Connecting to logging queue database...</p>
             </div>
           </div>
         </div>
@@ -225,47 +216,43 @@
     </div>
   </main>
 
-
   <script>
-    /* ─────────────────────────────────────────────────────────
-       State Scope
-    ───────────────────────────────────────────────────────── */
     const AppState = {
-      role: null,        // 'reception' or 'maintenance'
-      socket: null,      // Active socket connection
-      requests: []       // Main sync array [{id, guest_name, room_number, issue_category, notes, status, timestamp, completedAt}]
+      role: null,
+      socket: null,
+      requests: []
     };
 
-    /* ─────────────────────────────────────────────────────────
-       Real-Time Sockets Engine
-    ───────────────────────────────────────────────────────── */
+    /* ── Helper: Humanize Date/Time formatting ── */
+    function formatDateTime(isoString) {
+      if (!isoString) return 'N/A';
+      const dateObj = new Date(isoString);
+      if (isNaN(dateObj.getTime())) return 'N/A';
+      
+      const dateStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `${dateStr} @ ${timeStr}`;
+    }
+
     function initSocket() {
       const statusIndicator = document.getElementById('connection-status');
-      
-      // Connects cleanly to relative location (Render host environment domain)
       AppState.socket = io();
 
       AppState.socket.on('connect', () => {
         statusIndicator.className = "flex items-center space-x-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200/60 text-emerald-700";
-        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Live Pipeline Sync</span>`;
-        
-        // Re-authenticate role context upon pipeline resets
-        if (AppState.role) {
-          AppState.socket.emit('register_role', AppState.role);
-        }
+        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Live Sync</span>`;
+        if (AppState.role) AppState.socket.emit('register_role', AppState.role);
       });
 
       AppState.socket.on('disconnect', () => {
         statusIndicator.className = "flex items-center space-x-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/60 text-rose-700";
-        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Connection Lost</span>`;
+        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Offline</span>`;
       });
 
-      // WebSocket Core Inbound Events Broadcasts
       AppState.socket.on('new_request', (request) => {
         AppState.requests.unshift(request);
         renderRequests();
         triggerAudioChime();
-        triggerBrowserNotification("New Task Issued", `Room ${request.room_number}: ${request.issue_category}`);
       });
 
       AppState.socket.on('request_completed', (updatedRequest) => {
@@ -274,73 +261,42 @@
           target.status = 'completed';
           target.completedAt = updatedRequest.completedAt;
         } else {
-          // Fallback if missing context profile
           AppState.requests.push(updatedRequest);
         }
         renderRequests();
-        if (AppState.role === 'reception') {
-          triggerAudioChime();
-          triggerBrowserNotification("Task Completed", `Room ${updatedRequest.room_number} issue resolved.`);
-        }
+        triggerAudioChime();
       });
 
       AppState.socket.on('clients_count', (count) => {
         const txt = document.getElementById('stat-clients');
-        if (txt) {
-          txt.textContent = `${count} Hub Member${count === 1 ? '' : 's'} Connected`;
-        }
+        if (txt) txt.textContent = `${count} Hub Session${count === 1 ? '' : 's'} Active`;
       });
     }
 
-    /* ─────────────────────────────────────────────────────────
-       Asynchronous REST Fetch Infrastructure
-    ───────────────────────────────────────────────────────── */
     async function loadTodayRequests() {
       try {
         const response = await fetch('/api/requests/today');
         if (!response.ok) throw new Error('Database pipeline transmission dropped.');
         AppState.requests = await response.json();
-        
-        // Sort newest first
         AppState.requests.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
         renderRequests();
       } catch (err) {
         console.error("Pipeline failure:", err);
-        document.getElementById('requests-container').innerHTML = `
-          <div class="p-12 text-center text-rose-600 flex-1 flex flex-col items-center justify-center">
-            <i class="ti ti-alert-triangle text-3xl mb-2"></i>
-            <p class="text-sm font-semibold">Failed to populate tracking pipeline database.</p>
-            <p class="text-xs text-stone-400 mt-1">Check Render cluster runtime parameters logs.</p>
-          </div>
-        `;
       }
     }
 
-    /* ─────────────────────────────────────────────────────────
-       Submissions Engine
-    ───────────────────────────────────────────────────────── */
     async function handleFormSubmit(event) {
       event.preventDefault();
       
-      const guestName = document.getElementById('guest_name').value.trim();
-      const roomNumber = document.getElementById('room_number').value.trim();
-      const categorySelect = document.getElementById('issue_category');
-      const notes = document.getElementById('notes').value.trim();
-
-      const submitBtn = document.getElementById('submit-btn');
-      const originalBtnContent = submitBtn.innerHTML;
-
-      // Ensure exact snake_case fields matching target Express parameters
       const requestData = {
-        guest_name: guestName,
-        room_number: roomNumber,
-        issue_category: categorySelect.value, // FIXED: Now passes structural value instead of entire display text label
-        notes: notes
+        guest_name: document.getElementById('guest_name').value.trim(),
+        room_number: document.getElementById('room_number').value.trim(),
+        issue_category: document.getElementById('issue_category').value,
+        notes: document.getElementById('notes').value.trim()
       };
 
-      // Loading state UI lock
+      const submitBtn = document.getElementById('submit-btn');
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<i class="ti ti-loader text-base animate-spin"></i> <span>Processing...</span>`;
 
       try {
         const response = await fetch('/api/requests', {
@@ -349,81 +305,51 @@
           body: JSON.stringify(requestData)
         });
 
-        if (!response.ok) {
-          const failureContext = await response.json();
-          throw new Error(failureContext.errors?.join(', ') || 'Submission cluster returned structural error rejection.');
-        }
-
-        // Complete flush success UI interaction resets
+        if (!response.ok) throw new Error('Submission rejected.');
         document.getElementById('request-form').reset();
-        
       } catch (err) {
-        alert(`Form validation rejected:\n${err.message}`);
-        console.error("Submission rejected:", err);
+        alert(err.message);
       } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnContent;
       }
     }
 
     async function markAsResolved(id, btnElement) {
-      const originalContent = btnElement.innerHTML;
       btnElement.disabled = true;
-      btnElement.innerHTML = `<i class="ti ti-loader text-xs animate-spin"></i>`;
-
       try {
         const response = await fetch(`/api/requests/${id}/complete`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' }
         });
-
-        if (!response.ok) throw new Error('PATCH target state synchronization failed on backend storage container.');
-        
+        if (!response.ok) throw new Error('PATCH action request execution failed.');
       } catch (err) {
         alert(err.message);
         btnElement.disabled = false;
-        btnElement.innerHTML = originalContent;
       }
     }
 
-    /* ─────────────────────────────────────────────────────────
-       Dynamic Rendering DOM Engine
-    ───────────────────────────────────────────────────────── */
     function renderRequests() {
       const container = document.getElementById('requests-container');
       const badgeCount = document.getElementById('queue-count-badge');
       
-      // Compute dashboard stats aggregates
       const pendingItems = AppState.requests.filter(r => r.status === 'pending');
-      const completedItems = AppState.requests.filter(r => r.status === 'completed');
-
-      // Update structural badges
       badgeCount.textContent = `${pendingItems.length} Pending`;
       
       const sActive = document.getElementById('stat-active');
       const sDone = document.getElementById('stat-done');
       if (sActive) sActive.textContent = pendingItems.length;
-      if (sDone) sDone.textContent = completedItems.length;
+      if (sDone) sDone.textContent = AppState.requests.filter(r => r.status === 'completed').length;
 
       if (AppState.requests.length === 0) {
-        container.innerHTML = `
-          <div class="flex-1 flex flex-col items-center justify-center text-center p-16 text-stone-400">
-            <div class="h-12 w-12 rounded-full bg-stone-100 flex items-center justify-center mb-3 text-stone-400 border border-stone-200/40">
-              <i class="ti ti-clipboard-check text-xl"></i>
-            </div>
-            <p class="text-sm font-semibold text-stone-700">Clear Operating Queue</p>
-            <p class="text-xs text-stone-400 mt-0.5 max-w-xs">No active maintenance items have been registered on the server log files today.</p>
-          </div>
-        `;
+        container.innerHTML = `<div class="p-16 text-center text-stone-400">No logs managed today.</div>`;
         return;
       }
 
       container.innerHTML = AppState.requests.map(req => {
         const isPending = req.status === 'pending';
-        const dateObj = new Date(req.timestamp);
-        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const loggedTimeFormatted = formatDateTime(req.timestamp);
+        const completedTimeFormatted = formatDateTime(req.completedAt);
 
-        // Category Badge generation style layout matrix mappings
         const catMap = {
           Toilet: 'bg-blue-50 text-blue-700 border-blue-200/50',
           AC: 'bg-sky-50 text-sky-700 border-sky-200/50',
@@ -437,14 +363,14 @@
         const catStyle = catMap[req.issue_category] || 'bg-stone-50 text-stone-700 border-stone-200';
 
         return `
-          <div class="p-5 hover:bg-stone-50/70 transition-all duration-150 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${!isPending ? 'bg-stone-50/40 opacity-70' : ''}">
+          <div class="p-5 hover:bg-stone-50/70 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${!isPending ? 'bg-stone-50/40 opacity-75' : ''}">
             <div class="space-y-2">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="px-2 py-0.5 rounded font-mono text-xs font-bold bg-stone-900 text-white tracking-wide">RM ${req.room_number}</span>
+                <span class="px-2 py-0.5 rounded font-mono text-xs font-bold bg-stone-900 text-white">RM ${req.room_number}</span>
                 <span class="px-2.5 py-0.5 border rounded-full text-xs font-medium ${catStyle}">${req.issue_category}</span>
                 ${isPending 
-                  ? `<span class="inline-flex items-center text-[11px] font-medium text-amber-600 bg-amber-50/50 border border-amber-200/30 px-2 py-0.5 rounded-full"><span class="h-1 w-1 rounded-full bg-amber-500 mr-1.5 animate-ping"></span>Queue Waiting</span>`
-                  : `<span class="inline-flex items-center text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/40 px-2 py-0.5 rounded-full"><i class="ti ti-check mr-1"></i> Resolved</span>`
+                  ? `<span class="inline-flex items-center text-[11px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full"><span class="h-1 w-1 rounded-full bg-amber-500 mr-1.5 animate-ping"></span>In Progress</span>`
+                  : `<span class="inline-flex items-center text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/40 px-2 py-0.5 rounded-full"><i class="ti ti-check mr-1"></i> Fixed</span>`
                 }
               </div>
               
@@ -453,14 +379,14 @@
                 ${req.notes ? `<span class="text-stone-400 mx-1.5">—</span> <span class="text-stone-600 text-xs sm:text-sm italic">${req.notes}</span>` : ''}
               </div>
 
-              <div class="flex items-center space-x-3 text-xs text-stone-400 font-mono">
-                <span class="flex items-center"><i class="ti ti-clock mr-1"></i> Logged: ${timeStr}</span>
-                ${!isPending && req.completedAt 
-                  ? `<span class="flex items-center text-stone-500"><i class="ti ti-calendar-check mr-1"></i> Done: ${new Date(req.completedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>` 
+              <div class="space-y-1 font-mono text-xs text-stone-400">
+                <div class="flex items-center"><i class="ti ti-clock mr-1.5 text-stone-400"></i> Logged Request: <span class="text-stone-600 ml-1 font-sans font-medium">${loggedTimeFormatted}</span></div>
+                ${!isPending 
+                  ? `<div class="flex items-center text-emerald-600 font-semibold"><i class="ti ti-calendar-check mr-1.5"></i> Fixed Action: <span class="ml-1 font-sans font-bold">${completedTimeFormatted}</span></div>` 
                   : ''
                 }
                 ${isPending && AppState.role === 'maintenance' 
-                  ? `<span data-time="${req.timestamp}" class="elapsed-timer text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">0m elapsed</span>` 
+                  ? `<span data-time="${req.timestamp}" class="elapsed-timer inline-block text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded mt-1">0m elapsed</span>` 
                   : ''
                 }
               </div>
@@ -468,11 +394,7 @@
 
             <div class="sm:text-right flex items-center sm:justify-end">
               ${isPending && AppState.role === 'maintenance'
-                ? `<button onclick="markAsResolved('${req.id}', this)" class="w-full sm:w-auto inline-flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl text-xs shadow-md shadow-emerald-600/10 active:translate-y-[1px] transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"><i class="ti ti-check text-sm"></i> <span>Complete Job</span></button>`
-                : ''
-              }
-              ${!isPending 
-                ? `<span class="text-xs font-mono text-stone-400 hidden sm:block">Archived Ticket</span>` 
+                ? `<button onclick="markAsResolved('${req.id}', this)" class="w-full sm:w-auto inline-flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs shadow-md transition-all"><i class="ti ti-check text-sm"></i> <span>Mark Fixed</span></button>`
                 : ''
               }
             </div>
@@ -481,108 +403,46 @@
       }).join('');
     }
 
-    /* ─────────────────────────────────────────────────────────
-       Elapsed Timer Calculations Engine
-    ───────────────────────────────────────────────────────── */
     let elapsedIntervalId = null;
     function startElapsedTimer() {
       if (elapsedIntervalId) clearInterval(elapsedIntervalId);
-      
       const updateTimers = () => {
         document.querySelectorAll('.elapsed-timer').forEach(el => {
           const loggedTime = new Date(el.getAttribute('data-time'));
           const diffMs = new Date() - loggedTime;
           const diffMins = Math.floor(diffMs / 60000);
-          
-          if (diffMins < 1) {
-            el.textContent = 'Just now';
-          } else {
-            el.textContent = `${diffMins}m elapsed`;
-            if (diffMins >= 30) el.className = "elapsed-timer text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded animate-pulse";
-            else if (diffMins >= 15) el.className = "elapsed-timer text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded";
-          }
+          el.textContent = diffMins < 1 ? 'Just now' : `${diffMins}m elapsed`;
         });
       };
-      
       updateTimers();
       elapsedIntervalId = setInterval(updateTimers, 30000);
     }
 
-    /* ─────────────────────────────────────────────────────────
-       Multimedia Capabilities Notifications
-    ───────────────────────────────────────────────────────── */
     function triggerAudioChime() {
       try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // Chime note 1
-        const osc1 = audioContext.createOscillator();
-        const gain1 = audioContext.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-        gain1.gain.setValueAtTime(0.15, audioContext.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.4);
-        osc1.connect(gain1);
-        gain1.connect(audioContext.destination);
-        osc1.start();
-        osc1.stop(audioContext.currentTime + 0.4);
-
-        // Chime note 2
-        setTimeout(() => {
-          const osc2 = audioContext.createOscillator();
-          const gain2 = audioContext.createGain();
-          osc2.type = 'sine';
-          osc2.frequency.setValueAtTime(659.25, audioContext.currentTime); // E5
-          gain2.gain.setValueAtTime(0.15, audioContext.currentTime);
-          gain2.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
-          osc2.connect(gain2);
-          gain2.connect(audioContext.destination);
-          osc2.start();
-          osc2.stop(audioContext.currentTime + 0.5);
-        }, 120);
-        
-      } catch (e) {
-        console.warn("Audio Context setup blocked until browser window gets explicit user click activity interaction response configuration rules.");
-      }
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.frequency.setValueAtTime(523.25, audioContext.currentTime);
+        gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.4);
+        osc.connect(gain).connect(audioContext.destination);
+        osc.start(); osc.stop(audioContext.currentTime + 0.4);
+      } catch (e) {}
     }
 
-    function requestNotificationPermission() {
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-    }
-
-    function triggerBrowserNotification(title, body) {
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body, icon: '/favicon.ico' });
-      }
-    }
-
-    /* ─────────────────────────────────────────────────────────
-       Display Tickers Clock Updates
-    ───────────────────────────────────────────────────────── */
     function updateClock() {
       const liveClock = document.getElementById('live-clock');
-      if (liveClock) {
-        liveClock.textContent = new Date().toLocaleTimeString([], { hour12: true });
-      }
+      if (liveClock) liveClock.textContent = new Date().toLocaleTimeString([], { hour12: true });
     }
 
     function updateDateDisplays() {
       const liveDate = document.getElementById('live-date');
-      if (liveDate) {
-        const options = { weekday: 'long', month: 'short', day: 'numeric' };
-        liveDate.textContent = new Date().toLocaleDateString([], options);
-      }
+      if (liveDate) liveDate.textContent = new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
     }
 
-    /* ─────────────────────────────────────────────────────────
-       Workspace Orchestration Routing Switches
-    ───────────────────────────────────────────────────────── */
     function selectRole(role) {
       AppState.role = role;
-
-      // Adjust views DOM visibility matrices
       document.getElementById('screen-role-select').classList.add('hidden');
       document.getElementById('screen-dashboard').classList.remove('hidden');
 
@@ -592,65 +452,46 @@
       const rBreadcrumb = document.getElementById('role-breadcrumb');
 
       if (role === 'reception') {
-        rForm.classList.remove('hidden');
-        mStats.classList.add('hidden');
-        rTitle.textContent = "Reception Desk Tracking Console";
-        rBreadcrumb.textContent = "Guest Request Inbound Operations";
+        rForm.classList.remove('hidden'); mStats.classList.add('hidden');
+        rTitle.textContent = "Reception Desk Console";
+        rBreadcrumb.textContent = "Inbound Guest Placement Manager";
         if (elapsedIntervalId) clearInterval(elapsedIntervalId);
       } else {
-        mStats.classList.remove('hidden');
-        rForm.classList.add('hidden');
-        rTitle.textContent = "Maintenance Engineering Dashboard";
-        rBreadcrumb.textContent = "Active Structural Task Resolvers Pipeline";
+        mStats.classList.remove('hidden'); rForm.classList.add('hidden');
+        rTitle.textContent = "Room Engineer Console";
+        rBreadcrumb.textContent = "Active Infrastructure Task Queue";
         startElapsedTimer();
       }
 
-      // Sync url configurations query state flags parameters maps (survives accidental refreshes)
       const url = new URL(window.location);
       url.searchParams.set('role', role);
       window.history.replaceState({}, '', url);
 
-      // WebSockets Pipeline Handshake Auths Registration Dispatches
-      if (AppState.socket && AppState.socket.connected) {
-        AppState.socket.emit('register_role', role);
-      }
-
-      requestNotificationPermission();
+      if (AppState.socket && AppState.socket.connected) AppState.socket.emit('register_role', role);
       loadTodayRequests();
-      updateDateDisplays();
     }
 
     function exitWorkspace() {
       AppState.role = null;
       if (elapsedIntervalId) clearInterval(elapsedIntervalId);
-
       document.getElementById('screen-dashboard').classList.add('hidden');
       document.getElementById('screen-role-select').classList.remove('hidden');
-
       const url = new URL(window.location);
       url.searchParams.delete('role');
       window.history.replaceState({}, '', url);
     }
 
-    /* ─────────────────────────────────────────────────────────
-       Initialisation
-    ───────────────────────────────────────────────────────── */
     function init() {
       initSocket();
-
       updateClock();
+      updateDateDisplays();
       setInterval(updateClock, 1000);
 
-      // Deep URL query scanning checks routes entries configurations directly parameterizations
       const urlRole = new URL(window.location).searchParams.get('role');
       if (urlRole === 'reception' || urlRole === 'maintenance') {
         selectRole(urlRole);
       }
     }
-
-    const spinStyle = document.createElement('style');
-    spinStyle.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
-    document.head.appendChild(spinStyle);
 
     document.addEventListener('DOMContentLoaded', init);
   </script>
