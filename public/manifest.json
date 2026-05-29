@@ -3,9 +3,9 @@
   "name": "WH Hotel Maintenance Hub",
   "icons": [
     {
-      "src": "https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/icons/hotel-service.svg",
-      "type": "image/svg+xml",
+      "src": "/icon.png",
       "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
