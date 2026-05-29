@@ -1,0 +1,17 @@
+{
+  "short_name": "WH Hotel",
+  "name": "WH Hotel Maintenance Hub",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/icons/hotel-service.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/?standalone=true",
+  "background_color": "#FAF9F5",
+  "theme_color": "#D97706",
+  "display": "standalone",
+  "orientation": "portrait"
+}
