@@ -61,8 +61,12 @@
       </div>
     </div>
 
-    <div class="flex items-center space-x-6">
-      <div class="text-right">
+    <div class="flex items-center space-x-4 sm:space-x-6">
+      <button id="pwa-install-btn" class="hidden bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs px-3 py-1.5 rounded-full shadow transition-all flex items-center space-x-1">
+        <i class="ti ti-download"></i> <span>Install App</span>
+      </button>
+
+      <div class="text-right hidden sm:block">
         <p id="live-date" class="text-sm font-medium text-stone-800">---</p>
         <p id="live-clock" class="text-xs font-mono text-stone-500">00:00:00 PM</p>
       </div>
@@ -85,7 +89,7 @@
           <i class="ti ti-concierge-desk text-2xl"></i>
         </div>
         <h3 class="text-2xl font-bold text-stone-900 group-hover:text-amber-800 transition-colors">Front Desk Reception</h3>
-        <p class="text-stone-500 text-sm mt-2">File fresh guest maintenance incidents, select issue urgencies, and compile shift audit histories.</p>
+        <p class="text-stone-500 text-sm mt-2">File fresh guest maintenance incidents, select issue intensities, and compile shift audit histories.</p>
         <div class="mt-6 inline-flex items-center text-sm font-semibold text-amber-700 group-hover:translate-x-1 transition-transform">
           Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
         </div>
@@ -569,6 +573,34 @@
       url.searchParams.delete('role');
       window.history.replaceState({}, '', url);
     }
+
+    /* ── Programmatic PWA Prompt Listener Routing Logic ── */
+    let deferredPrompt;
+    const installBtn = document.getElementById('pwa-install-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent browser installation modal defaults from executing immediately
+      e.preventDefault();
+      deferredPrompt = e;
+      // Reveal the custom download button layout in the navbar frame
+      if (installBtn) installBtn.classList.remove('hidden');
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`PWA Installation Choice Outcome: ${outcome}`);
+        deferredPrompt = null;
+        installBtn.classList.add('hidden');
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      if (installBtn) installBtn.classList.add('hidden');
+      console.log('WH Hub PWA application layer successfully bound to local operating workspace.');
+    });
 
     function init() {
       initSocket();
