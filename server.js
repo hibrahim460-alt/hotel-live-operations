@@ -1,191 +1,157 @@
-/**
- * ═══════════════════════════════════════════════════════════════
- * WH HOTEL MAINTENANCE REQUEST SYSTEM — Backend Server
- * Stack: Node.js · Express · Socket.io · JSON File Store
- * ═══════════════════════════════════════════════════════════════
- */
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const fs = require('fs');
+const mongoose = require('mongoose');
 
 const app = express();
-const httpServer = http.createServer(app);
-const io = new Server(httpServer);
+const server = http.createServer(app);
+const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, 'data');
-const DATA_FILE = path.join(DATA_DIR, 'requests.json');
 
-// Global request log cache pipeline array store
-let requests = [];
-
-const VALID_CATEGORIES = [
-  'Toilet', 'AC', 'Carpet', 'Wood', 'Tiles',
-  'Painting', 'Room Smell', 'Electricity'
-];
-
-// Ensure local persistence database directory layer exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+// 1. Establish Permanent Connection to MongoDB Atlas via Render Environment Variables
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error("CRITICAL ERROR: MONGODB_URI environment variable is missing on Render!");
+  process.exit(1);
 }
 
-/* ── Storage IO Utility Handlers ── */
-function flushToDisk() {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(requests, null, 2), 'utf8');
-  } catch (err) {
-    console.error('[DISK_ERROR] Failed writing JSON requests log array:', err);
-  }
-}
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('🚀 Successfully connected to permanent MongoDB Atlas cluster.'))
+  .catch(err => console.error('❌ Database connection error:', err));
 
-function loadFromDisk() {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const payload = fs.readFileSync(DATA_FILE, 'utf8');
-      const rawRequests = JSON.parse(payload || '[]');
-      
-      // Keep a moving retention window of exactly 7 days
-      const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+// 2. Define the Permanent Data Schema for Maintenance Tickets
+const requestSchema = new mongoose.Schema({
+  guest_name: { type: String, required: true },
+  room_number: { type: String, required: true },
+  issue_category: { type: String, required: true },
+  notes: { type: String, default: "" },
+  status: { type: String, default: 'pending' }, // pending or completed
+  timestamp: { type: Date, default: Date.now }, // Creation date
+  completedAt: { type: Date }                     // Completion date
+});
 
-      requests = rawRequests.filter(item => {
-        const itemTime = new Date(item.timestamp).getTime();
-        return !isNaN(itemTime) && itemTime >= oneWeekAgo;
-      });
+const Request = mongoose.model('Request', requestSchema);
 
-      if (requests.length !== rawRequests.length) {
-        flushToDisk();
-        console.log(`[CLEANUP] Automated maintenance routine purged ${rawRequests.length - requests.length} expired logs older than 7 days.`);
-      }
-
-      console.log(`[DISK_BOOT] Mounted ${requests.length} core historical entries within retention window.`);
-    }
-  } catch (err) {
-    console.error('[DISK_ERROR] Failed parsing persistence database file:', err);
-    requests = [];
-  }
-}
-
-/* ── Middlewares ── */
+// Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-/* ── REST Endpoints Controller Actions ── */
+// 3. API Endpoints for Front-End Operations
 
-// Heartbeats diagnostic tracker
-app.get('/api/health', (req, res) => res.json({ status: 'healthy', uptime: process.uptime() }));
-
-// Fetch complete live payload 
-app.get('/api/requests/today', (req, res) => {
-  return res.json(requests);
+// Fetch Today's Live Requests (Last 24 Hours)
+app.get('/api/requests/today', async (req, res) => {
+  try {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Find requests from the last 24 hours OR any older ticket that is still pending
+    const requests = await Request.find({
+      $or: [
+        { timestamp: { $gte: twentyFourHoursAgo } },
+        { status: 'pending' }
+      ]
+    }).sort({ timestamp: -1 });
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load current tracking queue.' });
+  }
 });
 
-// Dynamic date-based report filter endpoint
-app.get('/api/reports', (req, res) => {
-  const { date } = req.query; // Expects format: YYYY-MM-DD
-  
-  if (!date) {
-    return res.status(400).json({ errors: ['A valid date parameter (YYYY-MM-DD) is required.'] });
+// File New Request
+app.post('/api/requests', async (req, res) => {
+  try {
+    const { guest_name, room_number, issue_category, notes } = req.body;
+    
+    const newRequest = new Request({
+      guest_name,
+      room_number,
+      issue_category,
+      notes
+    });
+
+    await newRequest.save();
+
+    // Broadcast immediately to all connected browsers via WebSockets
+    io.emit('new_request', newRequest);
+    res.status(201).json(newRequest);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to create request. Verify entry parameters.' });
   }
-
-  const filteredRequests = requests.filter(item => {
-    return item.timestamp && item.timestamp.startsWith(date);
-  });
-
-  const total = filteredRequests.length;
-  const fixed = filteredRequests.filter(r => r.status === 'completed').length;
-  const pending = filteredRequests.filter(r => r.status === 'pending').length;
-
-  return res.json({
-    date,
-    metrics: { total, fixed, pending },
-    requests: filteredRequests
-  });
 });
 
-// Ticket creation endpoint
-app.post('/api/requests', (req, res) => {
-  const { guest_name, room_number, issue_category, notes = '' } = req.body;
-  const errors = [];
+// Complete an Active Request
+app.patch('/api/requests/:id/complete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const updatedRequest = await Request.findByIdAndUpdate(
+      id,
+      { status: 'completed', completedAt: new Date() },
+      { new: true }
+    );
 
-  if (!guest_name?.toString().trim())      errors.push('guest_name is required.');
-  if (!room_number?.toString().trim())     errors.push('room_number is required.');
-  if (!issue_category?.toString().trim())  errors.push('issue_category is required.');
-  
-  if (issue_category && !VALID_CATEGORIES.includes(issue_category)) {
-    errors.push(`Invalid classification choice. Options: ${VALID_CATEGORIES.join(', ')}`);
+    if (!updatedRequest) {
+      return res.status(404).json({ error: 'Ticket item not found in data clusters.' });
+    }
+
+    // Broadcast update across WebSocket sync pipes
+    io.emit('request_completed', updatedRequest);
+    res.json(updatedRequest);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to modify database record state.' });
   }
-
-  if (errors.length > 0) {
-    return res.status(400).json({ success: false, errors });
-  }
-
-  const newRequest = {
-    id: Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
-    guest_name: guest_name.toString().trim(),
-    room_number: room_number.toString().trim(),
-    issue_category: issue_category.toString().trim(),
-    notes: notes.toString().trim(),
-    status: 'pending',
-    timestamp: new Date().toISOString(),
-    completedAt: null 
-  };
-
-  requests.unshift(newRequest);
-  flushToDisk();
-
-  io.emit('new_request', newRequest);
-
-  return res.status(201).json({ success: true, request: newRequest });
 });
 
-// Job resolution toggle action
-app.patch('/api/requests/:id/complete', (req, res) => {
-  const { id } = req.params;
-  const request = requests.find(r => r.id === id);
+// 4. API Endpoint to Generate Historical Reports
+app.get('/api/reports', async (req, res) => {
+  try {
+    const { date } = req.query; // Expects format: YYYY-MM-DD
+    if (!date) {
+      return res.status(400).json({ error: 'Target query calendar date required.' });
+    }
 
-  if (!request) {
-    return res.status(404).json({ success: false, errors: ['Target operational index identifier missing.'] });
+    // Create localized date boundaries to catch all records within that specific day
+    const startOfDay = new Date(`${date}T00:00:00.000Z`);
+    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+
+    const dayRequests = await Request.find({
+      timestamp: { $gte: startOfDay, $lte: endOfDay }
+    }).sort({ timestamp: -1 });
+
+    const fixed = dayRequests.filter(r => r.status === 'completed').length;
+    const pending = dayRequests.filter(r => r.status === 'pending').length;
+
+    res.json({
+      date,
+      metrics: { total: dayRequests.length, fixed, pending },
+      requests: dayRequests
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to isolate historical data matrices.' });
   }
-
-  request.status = 'completed';
-  request.completedAt = new Date().toISOString();
-
-  flushToDisk();
-
-  io.emit('request_completed', request);
-
-  return res.json({ success: true, request });
 });
 
-/* ── Socket.io Connection Core ── */
+// Fallback to route direct queries safely to index
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Real-Time WebSockets Engine Pipelines
 let connectedClients = 0;
-
 io.on('connection', (socket) => {
   connectedClients++;
   io.emit('clients_count', connectedClients);
 
   socket.on('register_role', (role) => {
-    const validRoles = ['reception', 'maintenance'];
-    if (validRoles.includes(role)) {
-      socket.data.role = role;
-      socket.join(role);
-    }
+    console.log(`Session attached to tracking pipe: ${role}`);
   });
 
   socket.on('disconnect', () => {
-    connectedClients = Math.max(0, connectedClients - 1);
+    connectedClients--;
     io.emit('clients_count', connectedClients);
   });
 });
 
-loadFromDisk();
-
-httpServer.listen(PORT, () => {
-  console.log(`\n====================================================`);
-  console.log(`  WH HOTEL MAINTENANCE APPLICATION RUNNING LIVE`);
-  console.log(`  Listening safely on host port cluster: ${PORT}`);
-  console.log(`====================================================\n`);
+server.listen(PORT, () => {
+  console.log(`WH Hotel Core Engine active on port ${PORT}`);
 });
