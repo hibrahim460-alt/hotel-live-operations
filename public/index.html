@@ -89,8 +89,7 @@
           <i class="ti ti-concierge-desk text-2xl"></i>
         </div>
         <h3 class="text-2xl font-bold text-stone-900 group-hover:text-amber-800 transition-colors">Front Desk Reception</h3>
-        <p class="text-stone-500 text-sm mt-2">File fresh guest maintenance incidents, select issue intensities, and compile shift audit histories.</p>
-        <div class="mt-6 inline-flex items-center text-sm font-semibold text-amber-700 group-hover:translate-x-1 transition-transform">
+        <div class="mt-6 inline-flex items-center text-sm font-semibold text-amber-700">
           Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
         </div>
       </button>
@@ -100,8 +99,7 @@
           <i class="ti ti-tools text-2xl"></i>
         </div>
         <h3 class="text-2xl font-bold text-stone-900 group-hover:text-emerald-800 transition-colors">Maintenance Engineering</h3>
-        <p class="text-stone-500 text-sm mt-2">Track room alerts backlog, view absolute logging timestamps, and instantly close jobs.</p>
-        <div class="mt-6 inline-flex items-center text-sm font-semibold text-emerald-700 group-hover:translate-x-1 transition-transform">
+        <div class="mt-6 inline-flex items-center text-sm font-semibold text-emerald-700">
           Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
         </div>
       </button>
@@ -116,12 +114,8 @@
           <span>/</span>
           <span id="role-breadcrumb" class="font-semibold text-stone-800 capitalize">Guest Services</span>
         </div>
-        <h2 id="role-title" class="text-3xl font-bold text-stone-900 tracking-tight">Reception Management</h2>
+        <h2 id="role-title" class="text-3xl font-bold text-stone-900 tracking-tight">Management Console</h2>
       </div>
-
-      <button onclick="exitWorkspace()" class="inline-flex items-center text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors bg-stone-100 hover:bg-stone-200 px-4 py-2 rounded-xl border border-stone-200">
-        <i class="ti ti-arrows-exchange-2 mr-1.5 text-base"></i> Change Console Role
-      </button>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -184,7 +178,7 @@
           <div class="bg-white border border-stone-200/80 rounded-3xl p-6 shadow-sm">
             <div class="border-b border-stone-100 pb-4 mb-5">
               <h3 class="text-xl font-bold text-stone-900">Manager Shift Report</h3>
-              <p class="text-xs text-stone-500 mt-0.5">Filter operations by an absolute date parameters index timeline.</p>
+              <p class="text-xs text-stone-500 mt-0.5">Filter operations by date parameters index timeline.</p>
             </div>
             <div class="space-y-4">
               <div>
@@ -194,6 +188,11 @@
               <button onclick="generateManagerReport()" class="w-full bg-stone-900 hover:bg-stone-800 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
                 <i class="ti ti-file-text text-base"></i> <span>Compile Activity Log</span>
               </button>
+              
+              <button onclick="downloadCSVReport()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-medium py-2 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-xs mt-2">
+                <i class="ti ti-download"></i> <span>Export Report to Excel/CSV</span>
+              </button>
+
               <button onclick="loadTodayRequests()" id="clear-report-btn" class="w-full text-stone-500 font-medium py-2 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 transition-all text-xs hidden">
                 ← Return to Live Tracking View
               </button>
@@ -311,7 +310,7 @@
       });
 
       AppState.socket.on('request_completed', (updatedRequest) => {
-        const target = AppState.requests.find(r => r.id === updatedRequest.id);
+        const target = AppState.requests.find(r => (r._id || r.id) === (updatedRequest._id || updatedRequest.id));
         if (target) {
           target.status = 'completed';
           target.completedAt = updatedRequest.completedAt;
@@ -347,6 +346,7 @@
       }
     }
 
+    // UPDATED FUNCTION: Correctly parses MongoDB custom _id matrix structures
     async function generateManagerReport() {
       const dateInput = document.getElementById('report-date-input').value;
       if (!dateInput) {
@@ -368,11 +368,46 @@
         document.getElementById('queue-main-title').textContent = `Archived Shift Audit Report`;
         document.getElementById('queue-count-badge').textContent = `Date: ${dateInput}`;
 
+        // Map data collection smoothly into internal application state
         AppState.requests = data.requests;
         renderRequests();
       } catch (err) {
         alert(err.message);
       }
+    }
+
+    // Function to generate and trigger the spreadsheet download
+    function downloadCSVReport() {
+      if (AppState.requests.length === 0) {
+        alert("There is no historical report data available to export.");
+        return;
+      }
+
+      let csvContent = "data:text/csv;charset=utf-8,ID,Room,Guest Name,Category,Status,Logged Time,Fixed Time\n";
+
+      AppState.requests.forEach(req => {
+        const row = [
+          req._id || req.id,
+          `"Room ${req.room_number}"`,
+          `"${req.guest_name}"`,
+          `"${req.issue_category}"`,
+          req.status.toUpperCase(),
+          req.timestamp,
+          req.completedAt || 'N/A'
+        ].join(",");
+        csvContent += row + "\n";
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      const selectedDate = document.getElementById('report-date-input').value || 'shift-report';
+      
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `WH_Hotel_Report_${selectedDate}.csv`);
+      document.body.appendChild(link);
+      
+      link.click();
+      document.body.removeChild(link);
     }
 
     async function handleFormSubmit(event) {
@@ -442,6 +477,7 @@
         const isPending = req.status === 'pending';
         const loggedTimeFormatted = formatDateTime(req.timestamp);
         const completedTimeFormatted = formatDateTime(req.completedAt);
+        const objectId = req._id || req.id;
 
         const catMap = {
           Toilet: 'bg-blue-50 text-blue-700 border-blue-200/50',
@@ -487,7 +523,7 @@
 
             <div class="sm:text-right flex items-center sm:justify-end">
               ${isPending && AppState.role === 'maintenance'
-                ? `<button onclick="markAsResolved('${req.id}', this)" class="w-full sm:w-auto inline-flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs shadow-md transition-all"><i class="ti ti-check text-sm"></i> <span>Mark Fixed</span></button>`
+                ? `<button onclick="markAsResolved('${objectId}', this)" class="w-full sm:w-auto inline-flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs shadow-md transition-all"><i class="ti ti-check text-sm"></i> <span>Mark Fixed</span></button>`
                 : ''
               }
             </div>
@@ -556,22 +592,8 @@
         startElapsedTimer();
       }
 
-      const url = new URL(window.location);
-      url.searchParams.set('role', role);
-      window.history.replaceState({}, '', url);
-
       if (AppState.socket && AppState.socket.connected) AppState.socket.emit('register_role', role);
       loadTodayRequests();
-    }
-
-    function exitWorkspace() {
-      AppState.role = null;
-      if (elapsedIntervalId) clearInterval(elapsedIntervalId);
-      document.getElementById('screen-dashboard').classList.add('hidden');
-      document.getElementById('screen-role-select').classList.remove('hidden');
-      const url = new URL(window.location);
-      url.searchParams.delete('role');
-      window.history.replaceState({}, '', url);
     }
 
     /* ── Programmatic PWA Prompt Listener Routing Logic ── */
@@ -579,10 +601,8 @@
     const installBtn = document.getElementById('pwa-install-btn');
 
     window.addEventListener('beforeinstallprompt', (e) => {
-      // Prevent browser installation modal defaults from executing immediately
       e.preventDefault();
       deferredPrompt = e;
-      // Reveal the custom download button layout in the navbar frame
       if (installBtn) installBtn.classList.remove('hidden');
     });
 
@@ -599,7 +619,7 @@
 
     window.addEventListener('appinstalled', () => {
       if (installBtn) installBtn.classList.add('hidden');
-      console.log('WH Hub PWA application layer successfully bound to local operating workspace.');
+      console.log('WH Hub PWA application layer successfully bound to workspace.');
     });
 
     function init() {
@@ -608,6 +628,7 @@
       updateDateDisplays();
       setInterval(updateClock, 1000);
 
+      // Check URL parameters for forced routing
       const urlRole = new URL(window.location).searchParams.get('role');
       if (urlRole === 'reception' || urlRole === 'maintenance') {
         selectRole(urlRole);
