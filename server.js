@@ -21,13 +21,13 @@ mongoose.connect(MONGODB_URI)
   .then(() => console.log('🚀 Successfully connected to permanent MongoDB Atlas cluster.'))
   .catch(err => console.error('❌ Database connection error:', err));
 
-// 2. Define the Permanent Data Schema for Maintenance & Housekeeping Tickets
+// 2. Define data schema for database tracking
 const requestSchema = new mongoose.Schema({
   guest_name: { type: String, required: true },
   room_number: { type: String, required: true },
   issue_category: { type: String, required: true },
   notes: { type: String, default: "" },
-  status: { type: String, default: 'pending' }, // pending or completed
+  status: { type: String, default: 'pending' }, 
   timestamp: { type: Date, default: Date.now }, 
   completedAt: { type: Date }                     
 });
@@ -37,9 +37,9 @@ const Request = mongoose.model('Request', requestSchema);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 3. API Endpoints for Front-End Operations
+// 3. API Endpoints for Frontend Operations
 
-// Fetch Active Requests
+// Fetch Active Pipeline Queue (Last 24 hours or any pending tasks)
 app.get('/api/requests/today', async (req, res) => {
   try {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -55,7 +55,7 @@ app.get('/api/requests/today', async (req, res) => {
   }
 });
 
-// File New Request
+// File and dispatch a completely fresh workflow ticket
 app.post('/api/requests', async (req, res) => {
   try {
     const { guest_name, room_number, issue_category, notes } = req.body;
@@ -69,7 +69,7 @@ app.post('/api/requests', async (req, res) => {
   }
 });
 
-// Complete an Active Request
+// Complete an Active Ticket
 app.patch('/api/requests/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
@@ -83,18 +83,24 @@ app.patch('/api/requests/:id/complete', async (req, res) => {
     io.emit('request_completed', updatedRequest);
     res.json(updatedRequest);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to modify database record state.' });
+    res.status(500).json({ error: 'Failed to complete database entry step.' });
   }
 });
 
-// Generate Historical Reports
+// Generate Clean Historical Reports Isolated by Date Input
 app.get('/api/reports', async (req, res) => {
   try {
-    const { date } = req.query; // Format: YYYY-MM-DD
+    const { date } = req.query; // Input structure format expected: YYYY-MM-DD
     if (!date) return res.status(400).json({ error: 'Target calendar date required.' });
 
+    // Handles timezone offset adjustments so midnight queries match your localized clock
+    const TZ_OFFSET_HOURS = 0; 
+
     const startOfDay = new Date(`${date}T00:00:00.000Z`);
+    startOfDay.setHours(startOfDay.getHours() - TZ_OFFSET_HOURS);
+
     const endOfDay = new Date(`${date}T23:59:59.999Z`);
+    endOfDay.setHours(endOfDay.getHours() - TZ_OFFSET_HOURS);
 
     const dayRequests = await Request.find({ timestamp: { $gte: startOfDay, $lte: endOfDay } }).sort({ timestamp: -1 });
     const fixed = dayRequests.filter(r => r.status === 'completed').length;
@@ -102,7 +108,7 @@ app.get('/api/reports', async (req, res) => {
 
     res.json({ date, metrics: { total: dayRequests.length, fixed, pending }, requests: dayRequests });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to isolate historical data.' });
+    res.status(500).json({ error: 'Failed to isolate historical data matrix.' });
   }
 });
 
@@ -110,15 +116,9 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Real-Time WebSockets Sync
-let connectedClients = 0;
+// Real-Time Event System Connection Engine
 io.on('connection', (socket) => {
-  connectedClients++;
-  io.emit('clients_count', connectedClients);
-  socket.on('disconnect', () => {
-    connectedClients--;
-    io.emit('clients_count', connectedClients);
-  });
+  console.log('Client system attached to real-time sync channel.');
 });
 
 server.listen(PORT, () => console.log(`WH Hotel Core Engine active on port ${PORT}`));
