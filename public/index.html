@@ -1,641 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WH Hotel Maintenance System</title>
-
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#D97706" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WH Hotel - Service Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" />
-
   <script src="/socket.io/socket.io.js"></script>
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ['"DM Serif Display"', 'serif'],
-            sans:    ['"DM Sans"', 'sans-serif'],
-            mono:    ['"DM Mono"', 'monospace'],
-          }
-        }
-      }
-    };
-
-    // Register PWA Service Worker Engine
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('PWA Service Worker registered.'))
-          .catch(err => console.error('PWA Registration failed:', err));
-      });
-    }
-  </script>
-
-  <style>
-    body { font-family: 'DM Sans', sans-serif; }
-    h1, h2, h3 { font-family: 'DM Serif Display', serif; }
-  </style>
 </head>
-<body class="bg-[#FAF9F5] text-stone-800 min-h-screen selection:bg-amber-100 selection:text-stone-900 antialiased">
+<body class="bg-stone-100 text-stone-900 font-sans min-h-screen">
 
-  <header class="border-b border-stone-200/80 bg-white/70 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <div class="h-10 w-10 rounded-xl bg-amber-600 flex items-center justify-center shadow-md shadow-amber-600/10">
-        <i class="ti ti-hotel-service text-white text-xl"></i>
-      </div>
-      <div>
-        <h1 class="text-xl font-bold tracking-tight text-stone-900">WH Hotel</h1>
-        <p class="text-xs font-mono uppercase tracking-wider text-stone-500">Maintenance Operations Hub</p>
-      </div>
-    </div>
-
-    <div class="flex items-center space-x-4 sm:space-x-6">
-      <button id="pwa-install-btn" class="hidden bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs px-3 py-1.5 rounded-full shadow transition-all flex items-center space-x-1">
-        <i class="ti ti-download"></i> <span>Install App</span>
+  <div id="screen-role-select" class="max-w-4xl mx-auto px-6 py-20 text-center">
+    <h1 class="text-4xl font-extrabold mb-4 text-stone-800">WH Hotel Workspace</h1>
+    <p class="text-stone-600 mb-12">Select your operational interface to interact with real-time pipelines.</p>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <button onclick="switchRole('reception')" class="p-8 bg-white rounded-2xl shadow-sm border border-stone-200 transition text-center group">
+        <div class="text-4xl mb-3">🛎️</div>
+        <div class="font-bold text-xl text-stone-800">Reception Desk</div>
       </button>
 
-      <div class="text-right hidden sm:block">
-        <p id="live-date" class="text-sm font-medium text-stone-800">---</p>
-        <p id="live-clock" class="text-xs font-mono text-stone-500">00:00:00 PM</p>
-      </div>
-      <div id="connection-status" class="flex items-center space-x-2 bg-stone-100 px-3 py-1.5 rounded-full border border-stone-200">
-        <span class="h-2 w-2 rounded-full bg-stone-300 animate-pulse"></span>
-        <span class="text-xs font-mono uppercase tracking-wider text-stone-600">Connecting</span>
-      </div>
-    </div>
-  </header>
-
-  <main id="screen-role-select" class="max-w-2xl mx-auto px-6 py-20 text-center">
-    <div class="space-y-4 mb-12">
-      <h2 class="text-4xl font-bold text-stone-900 tracking-tight sm:text-5xl">Select Workspace Dashboard</h2>
-      <p class="text-stone-500 max-w-md mx-auto">Please choose your operational interface to interact with real-time maintenance requests.</p>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-      <button onclick="selectRole('reception')" class="group text-left p-8 bg-white border border-stone-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-amber-600/30 transition-all duration-300">
-        <div class="h-14 w-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 mb-6 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300">
-          <i class="ti ti-concierge-desk text-2xl"></i>
-        </div>
-        <h3 class="text-2xl font-bold text-stone-900 group-hover:text-amber-800 transition-colors">Front Desk Reception</h3>
-        <div class="mt-6 inline-flex items-center text-sm font-semibold text-amber-700">
-          Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
-        </div>
+      <button onclick="switchRole('maintenance')" class="p-8 bg-white rounded-2xl shadow-sm border border-stone-200 transition text-center group">
+        <div class="text-4xl mb-3">🛠️</div>
+        <div class="font-bold text-xl text-stone-800">Maintenance Eng.</div>
       </button>
 
-      <button onclick="selectRole('maintenance')" class="group text-left p-8 bg-white border border-stone-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-emerald-600/30 transition-all duration-300">
-        <div class="h-14 w-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
-          <i class="ti ti-tools text-2xl"></i>
-        </div>
-        <h3 class="text-2xl font-bold text-stone-900 group-hover:text-emerald-800 transition-colors">Maintenance Engineering</h3>
-        <div class="mt-6 inline-flex items-center text-sm font-semibold text-emerald-700">
-          Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
-        </div>
+      <button onclick="switchRole('housekeeping')" class="p-8 bg-white rounded-2xl shadow-sm border border-stone-200 transition text-center group">
+        <div class="text-4xl mb-3">🧹</div>
+        <div class="font-bold text-xl text-stone-800">Housekeeping</div>
       </button>
     </div>
-  </main>
+  </div>
 
-  <main id="screen-dashboard" class="max-w-7xl mx-auto px-6 py-8 hidden">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-200 pb-6 mb-8 gap-4">
-      <div>
-        <div class="flex items-center space-x-2 text-stone-500 text-sm mb-1">
-          <span class="font-mono uppercase tracking-wider">Console Path</span>
-          <span>/</span>
-          <span id="role-breadcrumb" class="font-semibold text-stone-800 capitalize">Guest Services</span>
-        </div>
-        <h2 id="role-title" class="text-3xl font-bold text-stone-900 tracking-tight">Management Console</h2>
+  <div id="app-container" class="hidden max-w-7xl mx-auto px-4 py-6">
+    <header class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6 border border-stone-200 gap-4">
+      <div class="flex items-center gap-4">
+        <button onclick="location.reload()" class="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 rounded-md text-sm font-semibold transition">← Back</button>
+        <h2 id="dashboard-title" class="text-2xl font-bold text-stone-800">Department Dashboard</h2>
+      </div>
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 animate-pulse">● LIVE PIPELINE SYNC</span>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div id="form-panel" class="hidden lg:col-span-1 bg-white p-6 rounded-xl border border-stone-200 h-fit">
+        <h3 class="text-lg font-bold mb-4">New Request Dispatch</h3>
+        <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Room Number</label>
+            <input type="text" id="room_number" required placeholder="304" class="w-full p-2.5 border rounded-lg">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Guest Name</label>
+            <input type="text" id="guest_name" required placeholder="Mr. Smith" class="w-full p-2.5 border rounded-lg">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Task Category</label>
+            <select id="issue_category" required class="w-full p-2.5 border rounded-lg bg-white">
+              <optgroup label="🧹 HOUSEKEEPING DEPT">
+                <option value="Room Cleaning">Room Cleaning - Full Checkout</option>
+                <option value="Extra Bedding">Extra Pillows / Towels / Blankets</option>
+                <option value="Baby Crib / Bed">Baby Crib / Extra Bed Delivery</option>
+                <option value="Guest Supplies">Extra Shampoo / Coffee Tray / Bottled Water</option>
+                <option value="Minibar Restock">Minibar Restock</option>
+              </optgroup>
+              <optgroup label="🛠️ MAINTENANCE ENGINEERING DEPT">
+                <option value="General Repair">General Maintenance Repair</option>
+                <option value="Plumbing">Plumbing Issue</option>
+                <option value="Electrical">Electrical / Appliance Issue</option>
+                <option value="HVAC">AC / Heating Malfunction</option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Notes</label>
+            <textarea id="notes" rows="2" placeholder="Details..." class="w-full p-2.5 border rounded-lg"></textarea>
+          </div>
+          <button type="submit" id="submit-btn" class="w-full py-3 bg-stone-800 text-white font-bold rounded-lg hover:bg-stone-900 transition">Dispatch Request</button>
+        </form>
+      </div>
+
+      <div id="pipeline-panel" class="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200">
+        <h3 class="text-lg font-bold mb-4">Active Queue Pipeline</h3>
+        <div id="queue-container" class="space-y-3"></div>
       </div>
     </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <section class="lg:col-span-4 space-y-6">
-        
-        <div id="panel-reception-form" class="space-y-6 hidden">
-          <div class="bg-white border border-stone-200/80 rounded-3xl p-6 shadow-sm">
-            <div class="border-b border-stone-100 pb-4 mb-5">
-              <h3 class="text-xl font-bold text-stone-900">Log New Maintenance Item</h3>
-              <p class="text-xs text-stone-500 mt-0.5">Dispatches live room notifications immediately upon registration.</p>
-            </div>
-
-            <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
-              <div>
-                <label for="guest_name" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Guest Full Name</label>
-                <div class="relative">
-                  <i class="ti ti-user absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                  <input type="text" id="guest_name" required placeholder="e.g. John Doe" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                </div>
-              </div>
-
-              <div>
-                <label for="room_number" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Room / Suite Number</label>
-                <div class="relative">
-                  <i class="ti ti-key absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                  <input type="text" id="room_number" required placeholder="e.g. 402" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                </div>
-              </div>
-
-              <div>
-                <label for="issue_category" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Urgency Category</label>
-                <div class="relative">
-                  <i class="ti ti-category absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
-                  <select id="issue_category" required class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500">
-                    <option value="" disabled selected>Select issue category</option>
-                    <option value="Toilet">🚽 Toilet / Plumbing</option>
-                    <option value="AC">❄️ AC / Air Conditioning</option>
-                    <option value="Carpet">🧹 Carpet / Cleaning</option>
-                    <option value="Wood">🪚 Wood / Carpentry</option>
-                    <option value="Tiles">🧱 Tiles / Masonry</option>
-                    <option value="Painting">🎨 Painting / Walls</option>
-                    <option value="Room Smell">💨 Room Smell / Ventilation</option>
-                    <option value="Electricity">⚡ Electricity / Lights</option>
-                  </select>
-                  <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none text-base"></i>
-                </div>
-              </div>
-
-              <div>
-                <label for="notes" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Issue Details / Notes</label>
-                <textarea id="notes" rows="3" placeholder="Provide additional details regarding the mechanical error..." class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
-              </div>
-
-              <button type="submit" id="submit-btn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
-                <i class="ti ti-plus text-base"></i> <span>File Active Request</span>
-              </button>
-            </form>
-          </div>
-
-          <div class="bg-white border border-stone-200/80 rounded-3xl p-6 shadow-sm">
-            <div class="border-b border-stone-100 pb-4 mb-5">
-              <h3 class="text-xl font-bold text-stone-900">Manager Shift Report</h3>
-              <p class="text-xs text-stone-500 mt-0.5">Filter operations by date parameters index timeline.</p>
-            </div>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Select Operating Audit Date</label>
-                <input type="date" id="report-date-input" class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-              </div>
-              <button onclick="generateManagerReport()" class="w-full bg-stone-900 hover:bg-stone-800 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
-                <i class="ti ti-file-text text-base"></i> <span>Compile Activity Log</span>
-              </button>
-              
-              <button onclick="downloadCSVReport()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-medium py-2 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-xs mt-2">
-                <i class="ti ti-download"></i> <span>Export Report to Excel/CSV</span>
-              </button>
-
-              <button onclick="loadTodayRequests()" id="clear-report-btn" class="w-full text-stone-500 font-medium py-2 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 transition-all text-xs hidden">
-                ← Return to Live Tracking View
-              </button>
-            </div>
-
-            <div id="report-summary-output" class="mt-5 pt-4 border-t border-stone-100 hidden space-y-3">
-              <div class="grid grid-cols-2 gap-3 text-center font-mono text-xs">
-                <div class="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100">
-                  <p class="font-sans text-[10px] text-emerald-600 uppercase font-bold tracking-wider">Fixed Tickets</p>
-                  <p id="report-fixed-count" class="text-2xl font-bold mt-1">0</p>
-                </div>
-                <div class="p-3 bg-amber-50 text-amber-800 rounded-xl border border-amber-100">
-                  <p class="font-sans text-[10px] text-amber-600 uppercase font-bold tracking-wider">Left Pending</p>
-                  <p id="report-pending-count" class="text-2xl font-bold mt-1">0</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div id="panel-maintenance-stats" class="bg-stone-900 text-white rounded-3xl p-6 shadow-xl space-y-6 hidden relative overflow-hidden">
-          <div class="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-emerald-600/10 blur-2xl"></div>
-          <div class="border-b border-stone-800 pb-4">
-            <h3 class="text-xl font-bold text-white tracking-tight">Pipeline Control</h3>
-            <p class="text-xs text-stone-400 font-mono uppercase tracking-wider">Live Engineering Data</p>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div class="bg-stone-800/80 p-4 rounded-2xl border border-stone-700/30">
-              <p class="text-xs text-stone-400 font-medium uppercase tracking-wider">Active Backlog</p>
-              <p id="stat-active" class="text-4xl font-bold font-mono text-amber-500 mt-1">0</p>
-            </div>
-            <div class="bg-stone-800/80 p-4 rounded-2xl border border-stone-700/30">
-              <p class="text-xs text-stone-400 font-medium uppercase tracking-wider">Completed Today</p>
-              <p id="stat-done" class="text-4xl font-bold font-mono text-emerald-500 mt-1">0</p>
-            </div>
-          </div>
-
-          <div class="bg-stone-800/40 border border-stone-800 rounded-2xl p-4 flex items-center space-x-3.5">
-            <div class="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-lg">
-              <i class="ti ti-users"></i>
-            </div>
-            <div>
-              <p class="text-xs text-stone-400 font-medium uppercase tracking-wider">Active Core Connections</p>
-              <p id="stat-clients" class="text-sm font-semibold font-mono text-white mt-0.5">1 Session Connected</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="lg:col-span-8 space-y-6">
-        <div class="bg-white border border-stone-200/80 rounded-3xl shadow-sm overflow-hidden">
-          <div class="px-6 py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
-            <div class="flex items-center space-x-2.5">
-              <div class="h-8 w-8 rounded-lg bg-stone-100 text-stone-700 border border-stone-200/60 flex items-center justify-center text-base">
-                <i class="ti ti-layout-list"></i>
-              </div>
-              <div>
-                <h3 id="queue-main-title" class="text-lg font-bold text-stone-900">Active Tracking Logs</h3>
-                <p class="text-xs text-stone-500">Live request pipelines with absolute logging time metrics.</p>
-              </div>
-            </div>
-            <span id="queue-count-badge" class="px-2.5 py-1 bg-stone-100 border border-stone-200 font-mono text-xs text-stone-600 font-bold rounded-full">0 Pending</span>
-          </div>
-
-          <div id="requests-container" class="divide-y divide-stone-100 min-h-[300px] flex flex-col">
-            <div class="flex-1 flex flex-col items-center justify-center text-center p-12 text-stone-400">
-              <p class="text-sm font-medium text-stone-500">Connecting to tracking clusters...</p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  </main>
+  </div>
 
   <script>
-    const AppState = {
-      role: null,
-      socket: null,
-      requests: []
-    };
+    const socket = io();
+    let currentRole = '';
+    let globalRequestsArray = [];
+    const housekeepingTasks = ["Room Cleaning", "Extra Bedding", "Baby Crib / Bed", "Guest Supplies", "Minibar Restock"];
 
-    function formatDateTime(isoString) {
-      if (!isoString) return 'N/A';
-      const dateObj = new Date(isoString);
-      if (isNaN(dateObj.getTime())) return 'N/A';
-      
-      const dateStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      return `${dateStr} @ ${timeStr}`;
-    }
-
-    function initSocket() {
-      const statusIndicator = document.getElementById('connection-status');
-      AppState.socket = io();
-
-      AppState.socket.on('connect', () => {
-        statusIndicator.className = "flex items-center space-x-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200/60 text-emerald-700";
-        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Live Pipeline Sync</span>`;
-        if (AppState.role) AppState.socket.emit('register_role', AppState.role);
-      });
-
-      AppState.socket.on('disconnect', () => {
-        statusIndicator.className = "flex items-center space-x-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/60 text-rose-700";
-        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Offline</span>`;
-      });
-
-      AppState.socket.on('new_request', (request) => {
-        const reportBtn = document.getElementById('clear-report-btn');
-        if (reportBtn && reportBtn.classList.contains('hidden')) {
-          AppState.requests.unshift(request);
-          renderRequests();
-        }
-        triggerAudioChime();
-      });
-
-      AppState.socket.on('request_completed', (updatedRequest) => {
-        const target = AppState.requests.find(r => (r._id || r.id) === (updatedRequest._id || updatedRequest.id));
-        if (target) {
-          target.status = 'completed';
-          target.completedAt = updatedRequest.completedAt;
-        } else {
-          const reportBtn = document.getElementById('clear-report-btn');
-          if (reportBtn && reportBtn.classList.contains('hidden')) {
-            AppState.requests.push(updatedRequest);
-          }
-        }
-        renderRequests();
-        triggerAudioChime();
-      });
-
-      AppState.socket.on('clients_count', (count) => {
-        const txt = document.getElementById('stat-clients');
-        if (txt) txt.textContent = `${count} Hub Session${count === 1 ? '' : 's'} Active`;
-      });
-    }
-
-    async function loadTodayRequests() {
-      document.getElementById('report-summary-output').classList.add('hidden');
-      document.getElementById('clear-report-btn').classList.add('hidden');
-      document.getElementById('queue-main-title').textContent = "Active Tracking Logs";
-
+    async function loadLiveQueueData() {
       try {
-        const response = await fetch('/api/requests/today');
-        if (!response.ok) throw new Error('Database connection dropped.');
-        AppState.requests = await response.json();
-        AppState.requests.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-        renderRequests();
-      } catch (err) {
-        console.error("Load error:", err);
-      }
+        const res = await fetch('/api/requests/today');
+        if (res.ok) { globalRequestsArray = await res.json(); renderRequestQueue(); }
+      } catch (err) { console.error(err); }
     }
 
-    // UPDATED FUNCTION: Correctly parses MongoDB custom _id matrix structures
-    async function generateManagerReport() {
-      const dateInput = document.getElementById('report-date-input').value;
-      if (!dateInput) {
-        alert("Please select a specific operations calendar date first!");
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/reports?date=${dateInput}`);
-        if (!response.ok) throw new Error("Could not retrieve report logs.");
-        
-        const data = await response.json();
-        
-        document.getElementById('report-summary-output').classList.remove('hidden');
-        document.getElementById('clear-report-btn').classList.remove('hidden');
-        document.getElementById('report-fixed-count').textContent = data.metrics.fixed;
-        document.getElementById('report-pending-count').textContent = data.metrics.pending;
-
-        document.getElementById('queue-main-title').textContent = `Archived Shift Audit Report`;
-        document.getElementById('queue-count-badge').textContent = `Date: ${dateInput}`;
-
-        // Map data collection smoothly into internal application state
-        AppState.requests = data.requests;
-        renderRequests();
-      } catch (err) {
-        alert(err.message);
-      }
-    }
-
-    // Function to generate and trigger the spreadsheet download
-    function downloadCSVReport() {
-      if (AppState.requests.length === 0) {
-        alert("There is no historical report data available to export.");
-        return;
-      }
-
-      let csvContent = "data:text/csv;charset=utf-8,ID,Room,Guest Name,Category,Status,Logged Time,Fixed Time\n";
-
-      AppState.requests.forEach(req => {
-        const row = [
-          req._id || req.id,
-          `"Room ${req.room_number}"`,
-          `"${req.guest_name}"`,
-          `"${req.issue_category}"`,
-          req.status.toUpperCase(),
-          req.timestamp,
-          req.completedAt || 'N/A'
-        ].join(",");
-        csvContent += row + "\n";
-      });
-
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      const selectedDate = document.getElementById('report-date-input').value || 'shift-report';
+    function switchRole(role) {
+      currentRole = role;
+      document.getElementById('screen-role-select').classList.add('hidden');
+      document.getElementById('app-container').classList.remove('hidden');
       
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `WH_Hotel_Report_${selectedDate}.csv`);
-      document.body.appendChild(link);
-      
-      link.click();
-      document.body.removeChild(link);
+      const titleEl = document.getElementById('dashboard-title');
+      const formPanel = document.getElementById('form-panel');
+      const pipelinePanel = document.getElementById('pipeline-panel');
+
+      if (role === 'reception') {
+        titleEl.innerText = "🛎️ Front Desk Reception";
+        formPanel.classList.remove('hidden');
+        pipelinePanel.className = "lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200";
+      } else {
+        titleEl.innerText = role === 'maintenance' ? "🛠️ Maintenance Dashboard" : "🧹 Housekeeping Control";
+        formPanel.classList.add('hidden');
+        pipelinePanel.className = "lg:col-span-3 bg-white p-6 rounded-xl border border-stone-200";
+      }
+      loadLiveQueueData();
     }
 
     async function handleFormSubmit(event) {
       event.preventDefault();
-      
       const requestData = {
-        guest_name: document.getElementById('guest_name').value.trim(),
         room_number: document.getElementById('room_number').value.trim(),
+        guest_name: document.getElementById('guest_name').value.trim(),
         issue_category: document.getElementById('issue_category').value,
         notes: document.getElementById('notes').value.trim()
       };
-
-      const submitBtn = document.getElementById('submit-btn');
-      submitBtn.disabled = true;
-
       try {
-        const response = await fetch('/api/requests', {
+        await fetch('/api/requests', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestData)
         });
-
-        if (!response.ok) throw new Error('Form processing failure.');
         document.getElementById('request-form').reset();
-      } catch (err) {
-        alert(err.message);
-      } finally {
-        submitBtn.disabled = false;
-      }
+      } catch (err) { alert(err.message); }
     }
 
-    async function markAsResolved(id, btnElement) {
-      btnElement.disabled = true;
-      try {
-        const response = await fetch(`/api/requests/${id}/complete`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (!response.ok) throw new Error('PATCH mutation failed.');
-      } catch (err) {
-        alert(err.message);
-        btnElement.disabled = false;
-      }
+    async function markTaskComplete(id) {
+      try { await fetch(`/api/requests/${id}/complete`, { method: 'PATCH' }); } catch (err) { alert(err.message); }
     }
 
-    function renderRequests() {
-      const container = document.getElementById('requests-container');
-      const badgeCount = document.getElementById('queue-count-badge');
-      const pendingItems = AppState.requests.filter(r => r.status === 'pending');
+    function renderRequestQueue() {
+      const container = document.getElementById('queue-container');
+      container.innerHTML = '';
       
-      const reportBtn = document.getElementById('clear-report-btn');
-      if (reportBtn && reportBtn.classList.contains('hidden')) {
-        badgeCount.textContent = `${pendingItems.length} Pending`;
-      }
-      
-      const sActive = document.getElementById('stat-active');
-      const sDone = document.getElementById('stat-done');
-      if (sActive) sActive.textContent = pendingItems.length;
-      if (sDone) sDone.textContent = AppState.requests.filter(r => r.status === 'completed').length;
+      let filteredRequests = globalRequestsArray;
+      if (currentRole === 'maintenance') filteredRequests = globalRequestsArray.filter(req => !housekeepingTasks.includes(req.issue_category));
+      if (currentRole === 'housekeeping') filteredRequests = globalRequestsArray.filter(req => housekeepingTasks.includes(req.issue_category));
 
-      if (AppState.requests.length === 0) {
-        container.innerHTML = `<div class="p-16 text-center text-stone-400 text-sm font-medium">No log entries found.</div>`;
+      if (filteredRequests.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-stone-400">No active tasks in this department.</div>`;
         return;
       }
 
-      container.innerHTML = AppState.requests.map(req => {
-        const isPending = req.status === 'pending';
-        const loggedTimeFormatted = formatDateTime(req.timestamp);
-        const completedTimeFormatted = formatDateTime(req.completedAt);
-        const objectId = req._id || req.id;
-
-        const catMap = {
-          Toilet: 'bg-blue-50 text-blue-700 border-blue-200/50',
-          AC: 'bg-sky-50 text-sky-700 border-sky-200/50',
-          Carpet: 'bg-amber-50 text-amber-800 border-amber-200/50',
-          Wood: 'bg-orange-50 text-orange-800 border-orange-200/50',
-          Tiles: 'bg-stone-100 text-stone-700 border-stone-200/60',
-          Painting: 'bg-purple-50 text-purple-700 border-purple-200/50',
-          'Room Smell': 'bg-rose-50 text-rose-700 border-rose-200/50',
-          Electricity: 'bg-yellow-50 text-yellow-800 border-yellow-200/60'
-        };
-        const catStyle = catMap[req.issue_category] || 'bg-stone-50 text-stone-700 border-stone-200';
-
-        return `
-          <div class="p-5 hover:bg-stone-50/70 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${!isPending ? 'bg-stone-50/40 opacity-75' : ''}">
-            <div class="space-y-2">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="px-2 py-0.5 rounded font-mono text-xs font-bold bg-stone-900 text-white">RM ${req.room_number}</span>
-                <span class="px-2.5 py-0.5 border rounded-full text-xs font-medium ${catStyle}">${req.issue_category}</span>
-                ${isPending 
-                  ? `<span class="inline-flex items-center text-[11px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full"><span class="h-1 w-1 rounded-full bg-amber-500 mr-1.5 animate-ping"></span>In Progress</span>`
-                  : `<span class="inline-flex items-center text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/40 px-2 py-0.5 rounded-full"><i class="ti ti-check mr-1"></i> Fixed</span>`
-                }
-              </div>
-              
-              <div class="text-sm text-stone-800">
-                <span class="font-semibold text-stone-950">${req.guest_name}</span>
-                ${req.notes ? `<span class="text-stone-400 mx-1.5">—</span> <span class="text-stone-600 text-xs sm:text-sm italic">${req.notes}</span>` : ''}
-              </div>
-
-              <div class="space-y-1 font-mono text-xs text-stone-400">
-                <div class="flex items-center"><i class="ti ti-clock mr-1.5 text-stone-400"></i> Logged Request: <span class="text-stone-600 ml-1 font-sans font-medium">${loggedTimeFormatted}</span></div>
-                ${!isPending 
-                  ? `<div class="flex items-center text-emerald-600 font-semibold"><i class="ti ti-calendar-check mr-1.5"></i> Fixed Action: <span class="ml-1 font-sans font-bold">${completedTimeFormatted}</span></div>` 
-                  : ''
-                }
-                ${isPending && AppState.role === 'maintenance' 
-                  ? `<span data-time="${req.timestamp}" class="elapsed-timer inline-block text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded mt-1">0m elapsed</span>` 
-                  : ''
-                }
-              </div>
+      filteredRequests.forEach(req => {
+        const isHK = housekeepingTasks.includes(req.issue_category);
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border ${req.status === 'completed' ? 'bg-stone-50 border-stone-200 opacity-60' : isHK ? 'bg-purple-50/50 border-purple-200' : 'bg-amber-50/50 border-amber-200'}`;
+        card.innerHTML = `
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <span class="px-2 py-0.5 text-xs font-bold rounded-full ${isHK ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}">${isHK ? '🧹 ' : '🛠️ '}${req.issue_category}</span>
+              <h4 class="text-xl font-bold mt-1">Room ${req.room_number}</h4>
+              <p class="text-sm text-stone-600">Guest: ${req.guest_name}</p>
+              ${req.notes ? `<p class="text-xs text-stone-500 italic mt-1 bg-white p-1.5 rounded border border-stone-200">"${req.notes}"</p>` : ''}
             </div>
-
-            <div class="sm:text-right flex items-center sm:justify-end">
-              ${isPending && AppState.role === 'maintenance'
-                ? `<button onclick="markAsResolved('${objectId}', this)" class="w-full sm:w-auto inline-flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs shadow-md transition-all"><i class="ti ti-check text-sm"></i> <span>Mark Fixed</span></button>`
-                : ''
-              }
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    let elapsedIntervalId = null;
-    function startElapsedTimer() {
-      if (elapsedIntervalId) clearInterval(elapsedIntervalId);
-      const updateTimers = () => {
-        document.querySelectorAll('.elapsed-timer').forEach(el => {
-          const loggedTime = new Date(el.getAttribute('data-time'));
-          const diffMs = new Date() - loggedTime;
-          const diffMins = Math.floor(diffMs / 60000);
-          el.textContent = diffMins < 1 ? 'Just now' : `${diffMins}m elapsed`;
-        });
-      };
-      updateTimers();
-      elapsedIntervalId = setInterval(updateTimers, 30000);
-    }
-
-    function triggerAudioChime() {
-      try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.frequency.setValueAtTime(523.25, audioContext.currentTime);
-        gain.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.4);
-        osc.connect(gain).connect(audioContext.destination);
-        osc.start(); osc.stop(audioContext.currentTime + 0.4);
-      } catch (e) {}
-    }
-
-    function updateClock() {
-      const liveClock = document.getElementById('live-clock');
-      if (liveClock) liveClock.textContent = new Date().toLocaleTimeString([], { hour12: true });
-    }
-
-    function updateDateDisplays() {
-      const liveDate = document.getElementById('live-date');
-      if (liveDate) liveDate.textContent = new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
-    }
-
-    function selectRole(role) {
-      AppState.role = role;
-      document.getElementById('screen-role-select').classList.add('hidden');
-      document.getElementById('screen-dashboard').classList.remove('hidden');
-
-      const rForm = document.getElementById('panel-reception-form');
-      const mStats = document.getElementById('panel-maintenance-stats');
-      const rTitle = document.getElementById('role-title');
-      const rBreadcrumb = document.getElementById('role-breadcrumb');
-
-      if (role === 'reception') {
-        rForm.classList.remove('hidden'); mStats.classList.add('hidden');
-        rTitle.textContent = "Reception Desk Console";
-        rBreadcrumb.textContent = "Inbound Guest Placement Manager";
-        if (elapsedIntervalId) clearInterval(elapsedIntervalId);
-      } else {
-        mStats.classList.remove('hidden'); rForm.classList.add('hidden');
-        rTitle.textContent = "Room Engineer Console";
-        rBreadcrumb.textContent = "Active Infrastructure Task Queue";
-        startElapsedTimer();
-      }
-
-      if (AppState.socket && AppState.socket.connected) AppState.socket.emit('register_role', role);
-      loadTodayRequests();
-    }
-
-    /* ── Programmatic PWA Prompt Listener Routing Logic ── */
-    let deferredPrompt;
-    const installBtn = document.getElementById('pwa-install-btn');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      if (installBtn) installBtn.classList.remove('hidden');
-    });
-
-    if (installBtn) {
-      installBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`PWA Installation Choice Outcome: ${outcome}`);
-        deferredPrompt = null;
-        installBtn.classList.add('hidden');
+            ${req.status === 'pending' && currentRole !== 'reception' ? `<button onclick="markTaskComplete('${req._id}')" class="w-full sm:w-auto px-4 py-2 text-sm font-bold text-white rounded-lg ${isHK ? 'bg-purple-600' : 'bg-emerald-600'}">Mark Completed ✔</button>` : ''}
+            ${req.status === 'completed' ? `<span class="text-sm font-bold text-emerald-600">✅ Completed</span>` : ''}
+          </div>`;
+        container.appendChild(card);
       });
     }
 
-    window.addEventListener('appinstalled', () => {
-      if (installBtn) installBtn.classList.add('hidden');
-      console.log('WH Hub PWA application layer successfully bound to workspace.');
+    socket.on('new_request', (newReq) => { globalRequestsArray.unshift(newReq); renderRequestQueue(); });
+    socket.on('request_completed', (updatedReq) => {
+      const idx = globalRequestsArray.findIndex(r => r._id === updatedReq._id);
+      if (idx !== -1) { globalRequestsArray[idx] = updatedReq; renderRequestQueue(); }
     });
-
-    function init() {
-      initSocket();
-      updateClock();
-      updateDateDisplays();
-      setInterval(updateClock, 1000);
-
-      // Check URL parameters for forced routing
-      const urlRole = new URL(window.location).searchParams.get('role');
-      if (urlRole === 'reception' || urlRole === 'maintenance') {
-        selectRole(urlRole);
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
