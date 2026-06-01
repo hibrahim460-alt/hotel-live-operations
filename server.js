@@ -93,7 +93,6 @@ app.get('/api/reports', async (req, res) => {
     const { date } = req.query; // Input structure format expected: YYYY-MM-DD
     if (!date) return res.status(400).json({ error: 'Target calendar date required.' });
 
-    // Handles timezone offset adjustments so midnight queries match your localized clock
     const TZ_OFFSET_HOURS = 0; 
 
     const startOfDay = new Date(`${date}T00:00:00.000Z`);
