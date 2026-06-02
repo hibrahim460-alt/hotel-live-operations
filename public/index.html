@@ -116,28 +116,46 @@
 
       <div id="main-content-panel" class="lg:col-span-2 space-y-6">
         
-        <div id="admin-user-box" class="hidden bg-stone-900 text-white p-6 rounded-xl border border-stone-800 shadow-lg">
-          <h3 class="text-md font-bold text-amber-400 mb-3 uppercase tracking-wider flex items-center gap-2">👑 Account Provisioning Management Panel</h3>
-          <form onsubmit="handleAccountCreation(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+        <div id="admin-user-box" class="hidden bg-stone-900 text-white p-6 rounded-xl border border-stone-800 shadow-lg space-y-6">
+          <div class="border-b border-stone-800 pb-3">
+            <h3 class="text-md font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">👑 Account & Permission Management Panel</h3>
+            <p class="text-[11px] text-stone-400 mt-0.5">Provision fresh keys, modify restriction tiers, or revoke employee dashboard entry instantly.</p>
+          </div>
+
+          <form onsubmit="handleAccountCreation(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-stone-950 p-4 rounded-lg border border-stone-800">
             <div>
               <label class="block text-[10px] font-bold text-stone-400 uppercase mb-1">New ID Name</label>
               <input type="text" id="admin-new-user" required placeholder="e.g., staff_hk3" class="w-full p-2 bg-stone-800 text-white border border-stone-700 rounded text-xs focus:outline-none focus:border-amber-400">
             </div>
             <div>
               <label class="block text-[10px] font-bold text-stone-400 uppercase mb-1">Initial Password</label>
-              <input type="password" id="admin-new-pass" required placeholder="••••" class="w-full p-2 bg-stone-800 text-white border border-stone-700 rounded text-xs focus:outline-none focus:border-amber-400">
+              <input type="text" id="admin-new-pass" required placeholder="e.g., room123" class="w-full p-2 bg-stone-800 text-white border border-stone-700 rounded text-xs focus:outline-none focus:border-amber-400">
             </div>
             <div>
-              <label class="block text-[10px] font-bold text-stone-400 uppercase mb-1">Isolated Role Department</label>
+              <label class="block text-[10px] font-bold text-stone-400 uppercase mb-1">Permission Restriction Tier</label>
               <select id="admin-new-role" required class="w-full p-2 bg-stone-800 text-white border border-stone-700 rounded text-xs focus:outline-none focus:border-amber-400">
                 <option value="reception">🛎️ Reception Desk</option>
                 <option value="maintenance">🛠️ Maintenance Eng.</option>
                 <option value="housekeeping">🧹 Housekeeping</option>
               </select>
             </div>
-            <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold rounded text-xs transition uppercase tracking-wider">Save User Profile</button>
+            <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold rounded text-xs transition uppercase tracking-wider">Provision User</button>
           </form>
-          <div id="admin-roster-list" class="mt-4 pt-4 border-t border-stone-800 flex flex-wrap gap-2 text-[11px] text-stone-300"></div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-stone-300">
+              <thead class="text-[10px] font-bold uppercase tracking-wider text-stone-500 bg-stone-950/50">
+                <tr>
+                  <th class="p-2.5">User Handle</th>
+                  <th class="p-2.5">Access Password</th>
+                  <th class="p-2.5">Restriction Segment</th>
+                  <th class="p-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-table-body" class="divide-y divide-stone-800/60">
+                </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-xs">
@@ -163,7 +181,7 @@
       "add Shampoo", "add Shower Gel"
     ];
 
-    // PWA Mobile Installer Handlers
+    // PWA Mobile Installer
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
     }
@@ -178,7 +196,6 @@
       deferredPrompt = null;
     });
 
-    // 🔒 USER AUTHENTICATION CONTROLLER RUNTIMES
     if (userToken) { activateSessionDashboard(); }
 
     async function handleLoginRequest(event) {
@@ -194,7 +211,7 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Authentication structural fault.");
+        if (!res.ok) throw new Error(data.error || "Authentication fault.");
         
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
@@ -208,7 +225,6 @@
     function activateSessionDashboard() {
       document.getElementById('screen-login').classList.add('hidden');
       document.getElementById('app-container').classList.remove('hidden');
-      
       document.getElementById('user-badge').innerText = `👤 ${usernameString.toUpperCase()} (${currentRole})`;
       
       const titleEl = document.getElementById('dashboard-title');
@@ -216,7 +232,6 @@
       const mainContentPanel = document.getElementById('main-content-panel');
       const adminPanelBox = document.getElementById('admin-user-box');
 
-      // RESET VIEW HIDDEN FIELDS BASED ON EXACT ROLE MATCHES
       formPanel.classList.add('hidden');
       adminPanelBox.classList.add('hidden');
       mainContentPanel.className = "lg:col-span-3 space-y-6";
@@ -246,12 +261,12 @@
       location.reload();
     }
 
-    // 🚀 ADMIN USER ACCOUNT PROVISION FORM ENGINE
+    // 🚀 ADMIN PANEL CONTROL INTERACTION ENGINE
     async function handleAccountCreation(event) {
       event.preventDefault();
       const payload = {
         username: document.getElementById('admin-new-user').value.trim(),
-        password: document.getElementById('admin-new-pass').value,
+        password: document.getElementById('admin-new-pass').value.trim(),
         role: document.getElementById('admin-new-role').value
       };
       try {
@@ -262,7 +277,6 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        alert(data.message);
         document.getElementById('admin-new-user').value = '';
         document.getElementById('admin-new-pass').value = '';
         pullAdminUserRoster();
@@ -272,14 +286,69 @@
     async function pullAdminUserRoster() {
       try {
         const res = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${userToken}` } });
-        if (res.ok) {
-          const list = await res.json();
-          document.getElementById('admin-roster-list').innerHTML = 'Active Profiles: ' + list.map(u => `<span class="bg-stone-800 px-2 py-1 rounded border border-stone-700">${u.username} (${u.role})</span>`).join(' ');
-        }
+        if (!res.ok) return;
+        const list = await res.json();
+        const tbody = document.getElementById('admin-table-body');
+        tbody.innerHTML = '';
+
+        list.forEach(user => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-stone-800/30 transition-colors";
+          tr.innerHTML = `
+            <td class="p-2.5 font-bold font-mono text-amber-100">${user.username}</td>
+            <td class="p-2.5">
+              <input type="text" id="pw-${user._id}" value="${user.password}" class="bg-stone-800 border border-stone-700 px-2 py-1 rounded text-white focus:outline-none focus:border-amber-400 w-32 font-mono text-xs">
+            </td>
+            <td class="p-2.5">
+              <select id="role-${user._id}" class="bg-stone-800 border border-stone-700 px-2 py-1 rounded text-white focus:outline-none focus:border-amber-400 text-xs">
+                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>👑 admin</option>
+                <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>🛎️ reception</option>
+                <option value="maintenance" ${user.role === 'maintenance' ? 'selected' : ''}>🛠️ maintenance</option>
+                <option value="housekeeping" ${user.role === 'housekeeping' ? 'selected' : ''}>🧹 housekeeping</option>
+              </select>
+            </td>
+            <td class="p-2.5 text-right space-x-1 whitespace-nowrap">
+              <button onclick="updateUserAccount('${user._id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold transition text-[11px]">Save 💾</button>
+              ${user.username !== 'admin' ? `<button onclick="deleteUserAccount('${user._id}')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-bold transition text-[11px]">Purge ❌</button>` : ''}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
       } catch (e) {}
     }
 
-    // 📡 REQUEST AND DATA INTERACTION QUEUES
+    async function updateUserAccount(id) {
+      const payload = {
+        password: document.getElementById(`pw-${id}`).value.trim(),
+        role: document.getElementById(`role-${id}`).value
+      };
+      try {
+        const res = await fetch(`/api/admin/users/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alert("User account configurations saved successfully.");
+        pullAdminUserRoster();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function deleteUserAccount(id) {
+      if (!confirm("Are you absolutely sure you want to terminate this user's profile access rights?")) return;
+      try {
+        const res = await fetch(`/api/admin/users/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        pullAdminUserRoster();
+      } catch (err) { alert(err.message); }
+    }
+
+    // Pipeline Logic
     async function loadLiveQueueData() {
       try {
         const res = await fetch('/api/requests/today', { headers: { 'Authorization': `Bearer ${userToken}` } });
@@ -301,7 +370,7 @@
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
           body: JSON.stringify(requestData)
         });
-        if (!response.ok) throw new Error("Verification rejection on schema parameters.");
+        if (!response.ok) throw new Error("Verification rejection.");
         document.getElementById('request-form').reset();
       } catch (err) { alert(err.message); }
     }
@@ -319,21 +388,16 @@
     function renderRequestQueue() {
       const container = document.getElementById('queue-container');
       container.innerHTML = '';
-      
       let filteredRequests = globalRequestsArray;
       
-      // STRICT LAYER ISOLATION BY USER ROLE REGISTRY
       if (currentRole === 'maintenance') {
         filteredRequests = globalRequestsArray.filter(req => !housekeepingTasks.includes(req.issue_category));
       } else if (currentRole === 'housekeeping') {
         filteredRequests = globalRequestsArray.filter(req => housekeepingTasks.includes(req.issue_category));
-      } else if (currentRole === 'reception') {
-        // Reception sees both pipelines combined but cannot alter state elements
-        filteredRequests = globalRequestsArray;
       }
 
       if (filteredRequests.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-stone-400 font-medium">No operational workflows found in this dashboard queue.</div>`;
+        container.innerHTML = `<div class="text-center py-12 text-stone-400 font-medium">No operational workflows found in this queue.</div>`;
         return;
       }
 
