@@ -12,7 +12,7 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'wh_hotel_ultra_secret_key_2026';
 
-// 1. Database Connectivity Configuration
+// Database Connectivity
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   console.error("CRITICAL ERROR: MONGODB_URI environment variable is missing on Render!");
@@ -26,7 +26,7 @@ mongoose.connect(MONGODB_URI)
   })
   .catch(err => console.error('❌ Database connection error:', err));
 
-// 2. Database Schemas
+// Database Schemas (Upgraded with User Tracking Log Fields)
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true }, 
@@ -41,14 +41,16 @@ const requestSchema = new mongoose.Schema({
   notes: { type: String, default: "" },
   status: { type: String, default: 'pending' }, 
   timestamp: { type: Date, default: Date.now }, 
-  completedAt: { type: Date }                     
+  completedAt: { type: Date },
+  createdBy: { type: String, required: true },    // 🌟 Tracks which dispatcher generated the task
+  completedBy: { type: String, default: "" }      // 🌟 Tracks which operational staff completed the task
 });
 const Request = mongoose.model('Request', requestSchema);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 3. Security Guard Token Middleware (Gatekeeper)
+// Security Guard Token Middleware
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -56,12 +58,12 @@ function authenticateToken(req, res, next) {
 
   jwt.verify(token, JWT_SECRET, (err, decodedUser) => {
     if (err) return res.status(403).json({ error: 'Session expired or invalid.' });
-    req.user = decodedUser;
+    req.user = decodedUser; // Contains username and role
     next();
   });
 }
 
-// 4. API Endpoints
+// API Endpoints
 
 // Authentication Login Portal Route
 app.post('/api/auth/login', async (req, res) => {
@@ -96,7 +98,7 @@ app.post('/api/admin/users', authenticateToken, async (req, res) => {
   }
 });
 
-// ADMIN: List All Active Accounts (Including raw passwords for easy admin reference)
+// ADMIN: List All Active Accounts
 app.get('/api/admin/users', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Restricted access.' });
   try {
@@ -107,7 +109,7 @@ app.get('/api/admin/users', authenticateToken, async (req, res) => {
   }
 });
 
-// 🌟 NEW ADMIN ROUTE: Update User Credentials/Restrictions Dynamically
+// ADMIN: Update User Credentials/Restrictions
 app.patch('/api/admin/users/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Restricted access.' });
   try {
@@ -117,7 +119,7 @@ app.patch('/api/admin/users/:id', authenticateToken, async (req, res) => {
     const targetUser = await User.findById(id);
     if (!targetUser) return res.status(404).json({ error: 'User profile not found.' });
     if (targetUser.username === 'admin' && role !== 'admin') {
-      return res.status(400).json({ error: 'Safety Check: You cannot remove Admin privileges from the root admin account!' });
+      return res.status(400).json({ error: 'Safety Check: Root admin role cannot be stripped!' });
     }
 
     const updates = {};
@@ -131,7 +133,7 @@ app.patch('/api/admin/users/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// 🌟 NEW ADMIN ROUTE: Remove / Delete an Employee Account Permanently
+// ADMIN: Remove / Delete an Employee Account Permanently
 app.delete('/api/admin/users/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Restricted access.' });
   try {
@@ -144,7 +146,7 @@ app.delete('/api/admin/users/:id', authenticateToken, async (req, res) => {
     }
 
     await User.findByIdAndDelete(id);
-    res.json({ message: `Account '${targetUser.username}' has been successfully purged from the database.` });
+    res.json({ message: `Account '${targetUser.username}' has been successfully purged.` });
   } catch (err) {
     res.status(500).json({ error: 'Failed to execute profile deletion.' });
   }
@@ -163,16 +165,24 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
   }
 });
 
-// File and dispatch fresh task ticket
+// File and dispatch fresh task ticket (Upgraded to inject creator log string)
 app.post('/api/requests', authenticateToken, async (req, res) => {
   if (req.user.role !== 'reception' && req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Only Dispatch Teams can create workflows.' });
   }
   try {
     const { guest_name, room_number, issue_category, notes } = req.body;
-    const newRequest = new Request({ guest_name, room_number, issue_category, notes });
+    
+    // 🌟 Inject the user's account identifier straight from their verified token
+    const newRequest = new Request({ 
+      guest_name, 
+      room_number, 
+      issue_category, 
+      notes,
+      createdBy: req.user.username 
+    });
+    
     await newRequest.save();
-
     io.emit('new_request', newRequest);
     res.status(201).json(newRequest);
   } catch (err) {
@@ -180,14 +190,23 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
   }
 });
 
-// Mark Ticket Completed
+// Mark Ticket Completed (Upgraded to inject closing employee signature string)
 app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
   if (req.user.role === 'reception') return res.status(403).json({ error: 'Action restricted for front desk.' });
   try {
     const { id } = req.params;
+    
+    // 🌟 Record timestamps and the resolving employee's username
     const updatedRequest = await Request.findByIdAndUpdate(
-      id, { status: 'completed', completedAt: new Date() }, { new: true }
+      id, 
+      { 
+        status: 'completed', 
+        completedAt: new Date(),
+        completedBy: req.user.username 
+      }, 
+      { new: true }
     );
+    
     io.emit('request_completed', updatedRequest);
     res.json(updatedRequest);
   } catch (err) {
