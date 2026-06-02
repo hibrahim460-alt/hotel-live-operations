@@ -222,26 +222,30 @@ app.delete('/api/admin/users/:id', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Database record removal failure.' }); }
 });
 
-// --- 🛎️ WORK DISPATCH QUEUES ---
+// --- 🛎️ WORK DISPATCH QUEUES (WITH ADVANCED DATE-RANGE REPORT FILTERING) ---
 app.get('/api/requests/today', authenticateToken, async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
+
+    // If specific dates are requested, build a targeted chronological boundary report
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999); // Include all records up to the absolute end of that day
+
+      const rangeReport = await Request.find({
+        timestamp: { $gte: start, $lte: end }
+      }).sort({ timestamp: -1 });
+      
+      return res.json(rangeReport);
+    }
+
+    // Default Fallback behavior: Stream standard 24-hour sliding window dashboard data
     const limit = new Date(Date.now() - 24 * 60 * 60 * 1000);
     res.json(await Request.find({ $or: [{ timestamp: { $gte: limit } }, { status: 'pending' }] }).sort({ timestamp: -1 }));
-  } catch (err) { res.status(500).json({ error: 'Failed to crawl documents.' }); }
-});
-
-app.post('/api/requests', authenticateToken, async (req, res) => {
-  try {
-    const doc = new Request({ ...req.body, createdBy: req.user.username });
-    await doc.save(); io.emit('new_request', doc); res.status(201).json(doc);
-  } catch (err) { res.status(400).json({ error: 'Parsing runtime defect.' }); }
-});
-
-app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
-  try {
-    const doc = await Request.findByIdAndUpdate(req.params.id, { status: 'completed', completedAt: new Date(), completedBy: req.user.username }, { new: true });
-    io.emit('request_completed', doc); res.json(doc);
-  } catch (err) { res.status(500).json({ error: 'Patch trace fault.' }); }
+  } catch (err) { 
+    res.status(500).json({ error: 'Failed to crawl documents or compile date range report.' }); 
+  }
 });
 
 // --- 📦 PURCHASING ---
