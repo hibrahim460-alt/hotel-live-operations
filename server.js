@@ -22,14 +22,14 @@ if (!MONGODB_URI) {
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('🚀 Connected securely to permanent MongoDB Atlas cluster.');
-    seedInitialUsers(); // Check and seed accounts dynamically if empty
+    seedInitialUsers();
   })
   .catch(err => console.error('❌ Database connection error:', err));
 
 // 2. Database Schemas
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true }, // Plaintxt match or hash validation
+  password: { type: String, required: true }, 
   role: { type: String, required: true, enum: ['admin', 'reception', 'maintenance', 'housekeeping', 'room_service', 'accounting', 'sales'] }
 });
 const User = mongoose.model('User', userSchema);
@@ -73,7 +73,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password configuration.' });
     }
 
-    // Generate token matching the user's explicit profile role
     const token = jwt.sign({ username: foundUser.username, role: foundUser.role }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, role: foundUser.role, username: foundUser.username });
   } catch (err) {
@@ -81,7 +80,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Admin Route: Create New Users dynamically from Admin screen
+// ADMIN: Create New Users
 app.post('/api/admin/users', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Requires Admin Clearance Tiers.' });
   try {
@@ -91,24 +90,67 @@ app.post('/api/admin/users', authenticateToken, async (req, res) => {
 
     const newUser = new User({ username, password, role });
     await newUser.save();
-    res.status(201).json({ message: `User account '${username}' created with '${role}' permissions successfully.` });
+    res.status(201).json({ message: `User account '${username}' created successfully.` });
   } catch (err) {
     res.status(500).json({ error: 'Could not write profile to registry.' });
   }
 });
 
-// Admin Route: List All Active Accounts
+// ADMIN: List All Active Accounts (Including raw passwords for easy admin reference)
 app.get('/api/admin/users', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Restricted access.' });
   try {
-    const users = await User.find({}, 'username role').sort({ username: 1 });
+    const users = await User.find({}, 'username role password').sort({ username: 1 });
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: 'Error pulling roster.' });
   }
 });
 
-// Fetch Active Pipeline Queue (Securely optimized by role visibility limits)
+// 🌟 NEW ADMIN ROUTE: Update User Credentials/Restrictions Dynamically
+app.patch('/api/admin/users/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Restricted access.' });
+  try {
+    const { id } = req.params;
+    const { password, role } = req.body;
+
+    const targetUser = await User.findById(id);
+    if (!targetUser) return res.status(404).json({ error: 'User profile not found.' });
+    if (targetUser.username === 'admin' && role !== 'admin') {
+      return res.status(400).json({ error: 'Safety Check: You cannot remove Admin privileges from the root admin account!' });
+    }
+
+    const updates = {};
+    if (password) updates.password = password;
+    if (role) updates.role = role;
+
+    const updatedUser = await User.findByIdAndUpdate(id, updates, { new: true });
+    res.json({ message: `Account for '${updatedUser.username}' updated successfully.`, updatedUser });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update user parameters.' });
+  }
+});
+
+// 🌟 NEW ADMIN ROUTE: Remove / Delete an Employee Account Permanently
+app.delete('/api/admin/users/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Restricted access.' });
+  try {
+    const { id } = req.params;
+    const targetUser = await User.findById(id);
+    
+    if (!targetUser) return res.status(404).json({ error: 'User profile not found.' });
+    if (targetUser.username === 'admin') {
+      return res.status(400).json({ error: 'Action Blocked: The master admin profile cannot be deleted.' });
+    }
+
+    await User.findByIdAndDelete(id);
+    res.json({ message: `Account '${targetUser.username}' has been successfully purged from the database.` });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to execute profile deletion.' });
+  }
+});
+
+// Fetch Active Pipeline Queue
 app.get('/api/requests/today', authenticateToken, async (req, res) => {
   try {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -175,12 +217,11 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
   }
 });
 
-// Fallback PWA Single Page mapping
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 5. Automatic Initial Database Roster Seeding Sequence
+// Seeding Function
 async function seedInitialUsers() {
   try {
     const count = await User.countDocuments();
@@ -198,12 +239,12 @@ async function seedInitialUsers() {
         { username: 'hk_supervisor2', password: 'housekeep123', role: 'housekeeping' }
       ];
       await User.insertMany(initialRoster);
-      console.log('✅ Success: Seeded 9 secure hotel profiles. Default configurations live.');
+      console.log('✅ Success: Seeded 9 secure hotel profiles.');
     }
   } catch (err) {
     console.error('Failed processing data seeding step:', err);
   }
 }
 
-io.on('connection', (socket) => { console.log('System link synced via tracking socket.'); });
+io.on('connection', (socket) => {});
 server.listen(PORT, () => console.log(`WH Hotel Core Engine active on port ${PORT}`));
