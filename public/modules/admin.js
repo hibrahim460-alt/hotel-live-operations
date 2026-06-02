@@ -1,45 +1,271 @@
 import { secureFetch, showToast } from '../app.js';
 let formContainer, viewContainer;
 
-export function init(formElement, viewElement) { formContainer = formElement; viewContainer = viewElement; renderWorkspaceLayout(); refresh(); }
+// Define all system clearance flags centrally for the UI checkbox renderer
+const SYSTEM_ROLES_ARRAY = [
+  { id: 'admin', label: '👑 Admin' },
+  { id: 'executive', label: '📊 Exec' },
+  { id: 'operations', label: '⚙️ Ops' },
+  { id: 'reception', label: '🛎️ Front' },
+  { id: 'housekeeping', label: '🧹 HK' },
+  { id: 'maintenance', label: '🛠️ Eng' },
+  { id: 'purchasing', label: '📦 Supply' },
+  { id: 'accounting', label: '🧾 Audit' },
+  { id: 'sales', label: '📈 Sales' },
+  { id: 'reservations', label: '📅 Book' }
+];
+
+// Track which profile ID is currently active in the modification viewport
+let currentlyEditingUserId = null;
+
+export function init(formElement, viewElement) { 
+  formContainer = formElement; 
+  viewContainer = viewElement; 
+  currentlyEditingUserId = null;
+  renderWorkspaceLayout(); 
+  refresh(); 
+}
 
 function renderWorkspaceLayout() {
   formContainer.innerHTML = `
     <div class="space-y-4 text-stone-900">
-      <div><h3 class="text-amber-400 text-xs font-black uppercase tracking-wider">👑 System Security Panel</h3><p class="text-[10px] text-stone-400 mt-0.5 leading-tight">Provision system identifiers, configure roles, and monitor user databases.</p></div>
-      <form id="adm-user-form" class="space-y-2">
-        <input type="text" id="adm_user" required placeholder="User Handle ID" class="w-full p-2 bg-stone-800 border border-stone-700 text-white font-mono text-xs rounded-lg focus:outline-none focus:border-amber-400">
-        <input type="text" id="adm_pass" required placeholder="Security Password string" class="w-full p-2 bg-stone-800 border border-stone-700 text-white font-mono text-xs rounded-lg focus:outline-none focus:border-amber-400">
-        <select id="adm_role" class="w-full p-2 bg-stone-800 border border-stone-700 text-white text-xs rounded-lg focus:outline-none">
-          <option value="reception">🛎️ Reception</option><option value="housekeeping">🧹 Housekeeping</option><option value="maintenance">🛠️ Maintenance</option><option value="purchasing">📦 Purchasing</option><option value="reservations">📅 Reservations</option><option value="accounting">🧾 Accounting</option><option value="sales">📈 Sales</option><option value="admin">👑 System Admin</option>
-        </select>
-        <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-[11px] uppercase tracking-wider rounded-lg transition-all">Provision User Access</button>
-      </form>
+      <div>
+        <h3 class="text-amber-400 text-xs font-black uppercase tracking-wider">👑 System Security Panel</h3>
+        <p class="text-[10px] text-stone-400 mt-0.5 leading-tight">Provision system identifiers, configure granular roles, and monitor user databases.</p>
+      </div>
+      
+      <div id="adm-form-card" class="bg-stone-850 p-4 rounded-xl border border-stone-800 space-y-3">
+        <h4 id="form-context-title" class="text-[11px] font-black text-white uppercase tracking-wider">Provision New Account Identity</h4>
+        
+        <form id="adm-user-form" class="space-y-2.5">
+          <div>
+            <label class="block text-[9px] uppercase tracking-wider font-bold text-stone-400 mb-1">Account Handle ID</label>
+            <input type="text" id="adm_user" required placeholder="e.g. j.smith" class="w-full p-2 bg-stone-800 border border-stone-700 text-white font-mono text-xs rounded-lg focus:outline-none focus:border-amber-400">
+          </div>
+          
+          <div>
+            <label class="block text-[9px] uppercase tracking-wider font-bold text-stone-400 mb-1">Security Passkey String</label>
+            <input type="text" id="adm_pass" required placeholder="Access password code" class="w-full p-2 bg-stone-800 border border-stone-700 text-white font-mono text-xs rounded-lg focus:outline-none focus:border-amber-400">
+          </div>
+          
+          <div>
+            <label class="block text-[9px] uppercase tracking-wider font-bold text-stone-400 mb-1">Clearance Allocation Strategy (Select Primary or Base Layer)</label>
+            <select id="adm_role" class="w-full p-2 bg-stone-800 border border-stone-700 text-white text-xs rounded-lg focus:outline-none">
+              <option value="reception">🛎️ Reception</option>
+              <option value="housekeeping">🧹 Housekeeping</option>
+              <option value="maintenance">🛠️ Maintenance</option>
+              <option value="purchasing">📦 Purchasing</option>
+              <option value="reservations">📅 Reservations</option>
+              <option value="accounting">🧾 Accounting</option>
+              <option value="sales">📈 Sales</option>
+              <option value="operations">⚙️ Operations Manager</option>
+              <option value="executive">📊 Corporate Senior Executive</option>
+              <option value="admin">👑 System Admin</option>
+            </select>
+          </div>
+          
+          <div id="form-action-button-group" class="pt-1">
+            <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-[11px] uppercase tracking-wider rounded-lg transition-all active:scale-[0.99]">
+              Provision User Access
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   `;
-  document.getElementById('adm-user-form').onsubmit = handleUserCreation;
-  viewContainer.innerHTML = `<div class="space-y-3">
-    <div class="flex justify-between items-center border-b border-stone-800 pb-1.5"><h4 class="text-amber-400 text-xs font-black uppercase tracking-wider">System Enrolled Profiles Roster Index</h4><span id="roster-count-badge" class="px-2 py-0.5 bg-stone-800 rounded text-[10px] font-bold text-white">0 Accounts</span></div>
-    <div id="adm-roster-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono"></div>
-  </div>`;
+  
+  document.getElementById('adm-user-form').onsubmit = handleFormExecution;
+  
+  viewContainer.innerHTML = `
+    <div class="space-y-3">
+      <div class="flex justify-between items-center border-b border-stone-200 pb-2">
+        <h4 class="text-stone-500 text-xs font-black uppercase tracking-wider">System Enrolled Profiles Roster Index</h4>
+        <span id="roster-count-badge" class="px-2 py-0.5 bg-stone-100 rounded text-[10px] font-bold text-stone-600 border">0 Accounts</span>
+      </div>
+      <div id="adm-roster-list" class="space-y-2 text-[11px]"></div>
+    </div>
+  `;
 }
 
 export async function refresh() {
-  const list = document.getElementById('adm-roster-list'); if (!list) return;
+  const list = document.getElementById('adm-roster-list'); 
+  if (!list) return;
+  
   try {
-    const res = await secureFetch('/api/admin/users'); const data = await res.json();
-    document.getElementById('roster-count-badge').innerText = `${data.length} Profiles Active`;
-    list.innerHTML = data.map(u => `
-      <div class="p-2.5 bg-stone-900 border border-stone-800 rounded-xl flex justify-between items-center">
-        <div><span class="text-white font-bold block">${u.username}</span><span class="text-stone-500 text-[10px] uppercase block mt-0.5 font-sans font-bold ${u.role==='admin'?'text-amber-400':''}">clearance: ${u.role}</span></div>
-        <span class="text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 px-2 py-0.5 rounded text-[10px] font-bold">${u.password}</span>
-      </div>`).join('');
-  } catch(e){}
+    const res = await secureFetch('/api/admin/users'); 
+    const users = await res.json();
+    document.getElementById('roster-count-badge').innerText = `${users.length} Profiles Active`;
+    
+    list.innerHTML = users.map(user => {
+      return `
+        <div class="p-3 bg-stone-50 border border-stone-200 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-stone-900 font-bold text-xs">${user.username}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-stone-200 text-stone-700 border border-stone-300/40">${user.password}</span>
+            </div>
+            
+            <div class="grid grid-cols-5 gap-1.5 pt-1" id="matrix-grid-${user._id}">
+              ${SYSTEM_ROLES_ARRAY.map(roleOption => {
+                const isChecked = user.role === roleOption.id;
+                return `
+                  <label class="flex items-center gap-1 text-[9px] font-medium text-stone-500 select-none">
+                    <input type="checkbox" 
+                           data-user-id="${user._id}" 
+                           data-role-id="${roleOption.id}"
+                           ${isChecked ? 'checked' : ''} 
+                           disabled
+                           class="rounded border-stone-300 text-indigo-600 focus:ring-0 w-3 h-3 font-sans pointer-events-none">
+                    <span>${roleOption.label}</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-1.5 shrink-0 w-full md:w-auto justify-end border-t md:border-none pt-2 md:pt-0 border-stone-200">
+            <button type="button" 
+                    data-edit-btn-id="${user._id}"
+                    class="px-2.5 py-1 bg-white hover:bg-stone-100 text-stone-700 border border-stone-300 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+              Edit
+            </button>
+            <button type="button" 
+                    data-delete-btn-id="${user._id}"
+                    class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-stone-200 hover:border-rose-300 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+              Delete
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach programmatic click listeners across the dynamic elements
+    users.forEach(user => {
+      document.querySelector(`[data-edit-btn-id="${user._id}"]`).onclick = () => activateInlineEditState(user);
+      document.querySelector(`[data-delete-btn-id="${user._id}"]`).onclick = () => triggerIdentityPurge(user._id);
+    });
+
+  } catch(err) {
+    console.error("Roster extraction error context tracing execution stream:", err);
+  }
 }
 
-async function handleUserCreation(e) {
+function activateInlineEditState(user) {
+  currentlyEditingUserId = user._id;
+  
+  // 1. Shift the Left Panel Form layout state into "Retooling" mode
+  document.getElementById('form-context-title').innerText = `Retooling Profile: ${user.username}`;
+  document.getElementById('adm_user').value = user.username;
+  document.getElementById('adm_user').disabled = true; // Handle ID username is immutable
+  document.getElementById('adm_pass').value = user.password;
+  document.getElementById('adm_role').value = user.role;
+  
+  // 2. Adjust button arrangements for updating or resetting the selection context
+  document.getElementById('form-action-button-group').innerHTML = `
+    <div class="grid grid-cols-2 gap-2">
+      <button type="submit" class="py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider rounded-lg transition-all">
+        Save Rights
+      </button>
+      <button type="button" id="btn-cancel-edit" class="py-2 bg-stone-700 hover:bg-stone-600 text-white font-black text-[10px] uppercase tracking-wider rounded-lg transition-all">
+        Cancel
+      </button>
+    </div>
+  `;
+  
+  document.getElementById('btn-cancel-edit').onclick = resetFormToDefaultState;
+  
+  // 3. Highlight the active line card item row inside the view list layout
+  document.querySelectorAll('[data-user-id]').forEach(checkbox => {
+    if (checkbox.getAttribute('data-user-id') === user._id) {
+      checkbox.disabled = false;
+      checkbox.style.pointerEvents = 'auto';
+      
+      // Update role selection options when a checkbox is toggled inside the edit window
+      checkbox.onclick = (e) => {
+        const checkedRole = e.target.getAttribute('data-role-id');
+        document.getElementById('adm_role').value = checkedRole;
+        
+        // Ensure only one checkbox checkbox remains selected per user profile row
+        document.querySelectorAll(`[data-user-id="${user._id}"]`).forEach(cb => {
+          if (cb.getAttribute('data-role-id') !== checkedRole) cb.checked = false;
+        });
+      };
+    } else {
+      checkbox.disabled = true;
+      checkbox.style.pointerEvents = 'none';
+    }
+  });
+
+  showToast(`Modifying clearance access configuration bounds for: ${user.username}`);
+}
+
+function resetFormToDefaultState() {
+  currentlyEditingUserId = null;
+  document.getElementById('adm-user-form').reset();
+  document.getElementById('adm_user').disabled = false;
+  document.getElementById('form-context-title').innerText = "Provision New Account Identity";
+  document.getElementById('form-action-button-group').innerHTML = `
+    <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-[11px] uppercase tracking-wider rounded-lg transition-all">
+      Provision User Access
+    </button>
+  `;
+  refresh();
+}
+
+async function handleFormExecution(e) {
   e.preventDefault();
-  const payload = { username: document.getElementById('adm_user').value.trim(), password: document.getElementById('adm_pass').value.trim(), role: document.getElementById('adm_role').value };
-  const res = await secureFetch('/api/admin/users', { method: 'POST', body: JSON.stringify(payload) });
-  if (res.ok) { showToast("Identity provision matrix active.", "success"); document.getElementById('adm-user-form').reset(); refresh(); }
+  
+  const username = document.getElementById('adm_user').value.trim();
+  const password = document.getElementById('adm_pass').value.trim();
+  const role = document.getElementById('adm_role').value;
+  
+  if (currentlyEditingUserId) {
+    // RUNNING AN ACCOUNT MUTATION (PUT OPERATION)
+    const res = await secureFetch(`/api/admin/users/${currentlyEditingUserId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ password, role })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      showToast("Identity permission matrix modified successfully.", "success");
+      resetFormToDefaultState();
+    } else {
+      showToast(data.error || "Profile adjustment transaction declined.", "error");
+    }
+  } else {
+    // PROVISIONING A NEW ENTITY DEPLOYMENT (POST OPERATION)
+    const res = await secureFetch('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, role })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      showToast("Identity access privileges provisioned securely.", "success");
+      document.getElementById('adm-user-form').reset();
+      refresh();
+    } else {
+      showToast(data.error || "Failed to initialize identity allocation credentials.", "error");
+    }
+  }
+}
+
+async function triggerIdentityPurge(userId) {
+  if (!confirm("Confirm Account Purge: Are you sure you want to permanently delete this user credential profile from the database cluster? This action is irreversible.")) return;
+  
+  try {
+    const res = await secureFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    const data = await res.json();
+    
+    if (res.ok) {
+      showToast("Account dropped from security credential registers successfully.", "success");
+      if (currentlyEditingUserId === userId) resetFormToDefaultState();
+      refresh();
+    } else {
+      showToast(data.error || "Purge request denied by security cluster verification checks.", "error");
+    }
+  } catch(err) {
+    showToast("Network fault during execution route removal.", "error");
+  }
 }
