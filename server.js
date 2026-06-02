@@ -26,7 +26,7 @@ mongoose.connect(MONGODB_URI)
   })
   .catch(err => console.error('❌ Database connection error:', err));
 
-// Database Schemas (Upgraded with User Tracking Log Fields)
+// Database Schemas
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true }, 
@@ -42,8 +42,8 @@ const requestSchema = new mongoose.Schema({
   status: { type: String, default: 'pending' }, 
   timestamp: { type: Date, default: Date.now }, 
   completedAt: { type: Date },
-  createdBy: { type: String, required: true },    // 🌟 Tracks which dispatcher generated the task
-  completedBy: { type: String, default: "" }      // 🌟 Tracks which operational staff completed the task
+  createdBy: { type: String, required: true },    
+  completedBy: { type: String, default: "" }      
 });
 const Request = mongoose.model('Request', requestSchema);
 
@@ -58,7 +58,7 @@ function authenticateToken(req, res, next) {
 
   jwt.verify(token, JWT_SECRET, (err, decodedUser) => {
     if (err) return res.status(403).json({ error: 'Session expired or invalid.' });
-    req.user = decodedUser; // Contains username and role
+    req.user = decodedUser; 
     next();
   });
 }
@@ -165,15 +165,15 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
   }
 });
 
-// File and dispatch fresh task ticket (Upgraded to inject creator log string)
+// 🌟 File and dispatch fresh task ticket (Upgraded to accept submissions from Housekeeping!)
 app.post('/api/requests', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'reception' && req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Only Dispatch Teams can create workflows.' });
+  const allowedRoles = ['reception', 'admin', 'housekeeping'];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Your current account tier is blocked from launching tasks.' });
   }
   try {
     const { guest_name, room_number, issue_category, notes } = req.body;
     
-    // 🌟 Inject the user's account identifier straight from their verified token
     const newRequest = new Request({ 
       guest_name, 
       room_number, 
@@ -190,13 +190,12 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
   }
 });
 
-// Mark Ticket Completed (Upgraded to inject closing employee signature string)
+// Mark Ticket Completed 
 app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
   if (req.user.role === 'reception') return res.status(403).json({ error: 'Action restricted for front desk.' });
   try {
     const { id } = req.params;
     
-    // 🌟 Record timestamps and the resolving employee's username
     const updatedRequest = await Request.findByIdAndUpdate(
       id, 
       { 
