@@ -5,7 +5,7 @@ export const AppState = {
   token: localStorage.getItem('token') || '',
   role: localStorage.getItem('role') || '',
   username: localStorage.getItem('username') || '',
-  modules: {} // Holds references to initialized modules
+  modules: {} // Keeps operational memory references to all active layouts
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -39,7 +39,7 @@ async function handleLoginRequest(e) {
     AppState.role = data.role;
     AppState.username = data.username;
 
-    showToast(`Welcome back, ${data.username}!`, 'success');
+    showToast(`Access Verified: Welcome ${data.username}!`, 'success');
     initializeWorkspace();
   } catch (err) {
     showToast(err.message, 'error');
@@ -51,79 +51,81 @@ function terminateSession() {
   location.reload();
 }
 
-// THE MASTER ROUTER: Orchestrates full vs isolated access
+// THE ROUTER CONSOLE CORE: Split paths for Root vs Department scopes
 async function initializeWorkspace() {
   document.getElementById('auth-gate').classList.add('hidden');
   const shell = document.getElementById('workspace-shell');
   shell.classList.remove('hidden');
 
   const badge = document.getElementById('user-badge');
-  badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse"></span> SYSTEM ROOT: ${AppState.username.toUpperCase()}`;
+  badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse"></span> CONSOLE ROOT: ${AppState.username.toUpperCase()}`;
 
   const inputTarget = document.getElementById('module-input-target');
   const displayTarget = document.getElementById('module-display-target');
 
-  // Clear previous workspaces out of the DOM view area
   inputTarget.innerHTML = '';
   displayTarget.innerHTML = '';
 
   if (AppState.role === 'admin') {
-    // Modify structure to support multi-column responsive grid view dashboards
-    const workspaceContainer = document.querySelector('#workspace-shell > .max-w-7xl');
-    workspaceContainer.className = "max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6";
-    workspaceContainer.innerHTML = `
+    // Redraw view area mapping templates into structural operational matrices
+    const shellWrapper = document.querySelector('#workspace-shell > .max-w-7xl');
+    shellWrapper.className = "max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-8";
+    shellWrapper.innerHTML = `
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <section id="admin-input-col" class="lg:col-span-1 bg-stone-900 text-white p-6 rounded-2xl shadow-xl h-fit border border-stone-800"></section>
+        <section id="admin-input-col" class="lg:col-span-1 bg-stone-900 text-white p-6 rounded-2xl shadow-xl border border-stone-800 h-fit"></section>
         <section id="admin-display-col" class="lg:col-span-3 bg-stone-950 text-white p-6 rounded-2xl shadow-xl border border-stone-800 h-fit max-h-[400px] overflow-y-auto"></section>
       </div>
       
-      <h2 class="text-xs font-black uppercase tracking-widest text-stone-400 border-b border-stone-200 pb-2">Operational Command Center (Full View)</h2>
-      <div id="master-admin-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-6"></div>
+      <div class="border-t border-stone-200 pt-4">
+        <h2 class="text-xs font-black uppercase tracking-widest text-stone-400 mb-6 flex items-center gap-2">
+          <span class="w-2 h-2 bg-amber-500 rounded-full animate-ping"></span> Live Global Enterprise Systems Core
+        </h2>
+        <div id="master-admin-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-8"></div>
+      </div>
     `;
 
-    // 1. Lazy-Load Root Administration Module First
+    // 1. Instantly load Admin Profile Control Board
     const adminModule = await import('./modules/admin.js');
     adminModule.init(document.getElementById('admin-input-col'), document.getElementById('admin-display-col'));
     AppState.modules['admin'] = adminModule;
 
-    // 2. Build grids for operational workflows dynamically
-    const adminGrid = document.getElementById('master-admin-grid');
-    const operationalApps = ['reception', 'housekeeping', 'maintenance', 'purchasing', 'accounting', 'sales', 'reservations'];
+    // 2. Loop & mount every standalone application frame onto the Admin view layout workspace
+    const subApps = ['reception', 'housekeeping', 'maintenance', 'purchasing', 'accounting', 'sales', 'reservations'];
+    const gridElement = document.getElementById('master-admin-grid');
 
-    for (const app of operationalApps) {
-      const card = document.createElement('div');
-      card.className = "bg-white p-6 rounded-2xl border border-stone-200 shadow-xs space-y-4";
-      card.innerHTML = `
+    for (const app of subApps) {
+      const widget = document.createElement('div');
+      widget.className = "bg-white p-6 rounded-2xl border border-stone-200/90 shadow-xs space-y-4 hover:border-stone-300 transition-all";
+      widget.innerHTML = `
         <div class="flex justify-between items-center border-b border-stone-100 pb-2">
-          <h4 class="text-xs font-black uppercase tracking-wider text-stone-400">System App Component: ${app}</h4>
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <h4 class="text-xs font-black uppercase tracking-wider text-stone-400">Application Node Module: ${app}</h4>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-xs"></span>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div id="${app}-input-slot" class="md:col-span-1"></div>
-          <div id="${app}-display-slot" class="md:col-span-2 max-h-[350px] overflow-y-auto pr-1"></div>
+          <div id="${app}-display-slot" class="md:col-span-2 max-h-[380px] overflow-y-auto pr-1"></div>
         </div>
       `;
-      adminGrid.appendChild(card);
+      gridElement.appendChild(widget);
 
-      // Dynamically mount sub-components into their allocated slot layout panels
       try {
-        const mod = await import(`./modules/${app}.js`);
-        mod.init(document.getElementById(`${app}-input-slot`), document.getElementById(`${app}-display-slot`));
-        AppState.modules[app] = mod;
+        const component = await import(`./modules/${app}.js`);
+        component.init(document.getElementById(`${app}-input-slot`), document.getElementById(`${app}-display-slot`));
+        AppState.modules[app] = component;
       } catch (err) {
-        console.error(`Could not attach operational array logic to slot: ${app}`, err);
+        console.error(`Component injection error for node layout mapping pointer: ${app}`, err);
       }
     }
 
   } else {
-    // STANDALONE USER ACCESS ROUTE: Standard users only get their own screen layout architecture
+    // STANDARD ACCESS PROTOCOL: Map standard workflows into isolated target locations
     try {
       let modulePath = `./modules/${AppState.role}.js`;
-      const module = await import(modulePath);
-      AppState.modules[AppState.role] = module;
-      module.init(inputTarget, displayTarget);
+      const structuralModule = await import(modulePath);
+      AppState.modules[AppState.role] = structuralModule;
+      structuralModule.init(inputTarget, displayTarget);
     } catch (error) {
-      showToast("Application module mounting error.", "error");
+      showToast("Critical runtime module binding error.", "error");
     }
   }
 }
@@ -149,10 +151,10 @@ export function showToast(message, type = 'info') {
   setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3500);
 }
 
-// Global WebSocket Broadcast Refresh Pipe Listener Loops
+// Websocket sync loops: Pushes continuous refresh triggers across all memory reference registers
 socket.on('new_request', () => {
-  Object.values(AppState.modules).forEach(mod => { if (mod.refresh) mod.refresh(); });
+  Object.values(AppState.modules).forEach(m => { if (m.refresh) m.refresh(); });
 });
 socket.on('request_completed', () => {
-  Object.values(AppState.modules).forEach(mod => { if (mod.refresh) mod.refresh(); });
+  Object.values(AppState.modules).forEach(m => { if (m.refresh) m.refresh(); });
 });
