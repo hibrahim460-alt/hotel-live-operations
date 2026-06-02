@@ -5,8 +5,7 @@ export const AppState = {
   token: localStorage.getItem('token') || '',
   role: localStorage.getItem('role') || '',
   username: localStorage.getItem('username') || '',
-  activeModule: null,
-  cachedData: []
+  modules: {} // Holds references to initialized modules
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -52,37 +51,83 @@ function terminateSession() {
   location.reload();
 }
 
-// ROUTING MATRIX: Loads app components dynamically instantly based on user clearances
+// THE MASTER ROUTER: Orchestrates full vs isolated access
 async function initializeWorkspace() {
   document.getElementById('auth-gate').classList.add('hidden');
   const shell = document.getElementById('workspace-shell');
   shell.classList.remove('hidden');
 
   const badge = document.getElementById('user-badge');
-  badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> ${AppState.username.toUpperCase()} (${AppState.role.toUpperCase()})`;
+  badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse"></span> SYSTEM ROOT: ${AppState.username.toUpperCase()}`;
 
-  // Display Approval Dashboard Tab to users authorized to issue cross-department verifications
-  if (['admin', 'accounting', 'purchasing'].includes(AppState.role)) {
-    document.getElementById('approval-pill-container').classList.remove('hidden');
-    document.getElementById('nav-approvals-btn').onclick = () => mountApprovalInbox();
-    syncApprovalCountBadge();
-  }
+  const inputTarget = document.getElementById('module-input-target');
+  const displayTarget = document.getElementById('module-display-target');
 
-  // LAZY LOADING TRIGGERS: Fetches only the JavaScript requested by the system role profile
-  try {
-    let modulePath = `./modules/${AppState.role}.js`;
-    const module = await import(modulePath);
-    AppState.activeModule = module;
-    
-    // Inject and execute module logic instantly
-    module.init(document.getElementById('module-input-target'), document.getElementById('module-display-target'));
-  } catch (error) {
-    console.error("Failed to load application profile framework component.", error);
-    showToast("Application module mounting error.", "error");
+  // Clear previous workspaces out of the DOM view area
+  inputTarget.innerHTML = '';
+  displayTarget.innerHTML = '';
+
+  if (AppState.role === 'admin') {
+    // Modify structure to support multi-column responsive grid view dashboards
+    const workspaceContainer = document.querySelector('#workspace-shell > .max-w-7xl');
+    workspaceContainer.className = "max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6";
+    workspaceContainer.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <section id="admin-input-col" class="lg:col-span-1 bg-stone-900 text-white p-6 rounded-2xl shadow-xl h-fit border border-stone-800"></section>
+        <section id="admin-display-col" class="lg:col-span-3 bg-stone-950 text-white p-6 rounded-2xl shadow-xl border border-stone-800 h-fit max-h-[400px] overflow-y-auto"></section>
+      </div>
+      
+      <h2 class="text-xs font-black uppercase tracking-widest text-stone-400 border-b border-stone-200 pb-2">Operational Command Center (Full View)</h2>
+      <div id="master-admin-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-6"></div>
+    `;
+
+    // 1. Lazy-Load Root Administration Module First
+    const adminModule = await import('./modules/admin.js');
+    adminModule.init(document.getElementById('admin-input-col'), document.getElementById('admin-display-col'));
+    AppState.modules['admin'] = adminModule;
+
+    // 2. Build grids for operational workflows dynamically
+    const adminGrid = document.getElementById('master-admin-grid');
+    const operationalApps = ['reception', 'housekeeping', 'maintenance', 'purchasing', 'accounting', 'sales', 'reservations'];
+
+    for (const app of operationalApps) {
+      const card = document.createElement('div');
+      card.className = "bg-white p-6 rounded-2xl border border-stone-200 shadow-xs space-y-4";
+      card.innerHTML = `
+        <div class="flex justify-between items-center border-b border-stone-100 pb-2">
+          <h4 class="text-xs font-black uppercase tracking-wider text-stone-400">System App Component: ${app}</h4>
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div id="${app}-input-slot" class="md:col-span-1"></div>
+          <div id="${app}-display-slot" class="md:col-span-2 max-h-[350px] overflow-y-auto pr-1"></div>
+        </div>
+      `;
+      adminGrid.appendChild(card);
+
+      // Dynamically mount sub-components into their allocated slot layout panels
+      try {
+        const mod = await import(`./modules/${app}.js`);
+        mod.init(document.getElementById(`${app}-input-slot`), document.getElementById(`${app}-display-slot`));
+        AppState.modules[app] = mod;
+      } catch (err) {
+        console.error(`Could not attach operational array logic to slot: ${app}`, err);
+      }
+    }
+
+  } else {
+    // STANDALONE USER ACCESS ROUTE: Standard users only get their own screen layout architecture
+    try {
+      let modulePath = `./modules/${AppState.role}.js`;
+      const module = await import(modulePath);
+      AppState.modules[AppState.role] = module;
+      module.init(inputTarget, displayTarget);
+    } catch (error) {
+      showToast("Application module mounting error.", "error");
+    }
   }
 }
 
-// GLOBAL UTILITY HOOKS FOR ALL SUB-MODULES
 export async function secureFetch(url, options = {}) {
   options.headers = {
     ...options.headers,
@@ -104,73 +149,10 @@ export function showToast(message, type = 'info') {
   setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3500);
 }
 
-// SHARED INTER-DEPARTMENT CROSS APPROVAL MODULE SCREEN
-async function mountApprovalInbox() {
-  const displayTarget = document.getElementById('module-display-target');
-  displayTarget.innerHTML = `
-    <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs space-y-4">
-      <h3 class="text-lg font-black text-stone-900">🔔 Inter-Department Routing Approvals Inbox</h3>
-      <p class="text-xs text-stone-400">Cross-department operations requiring management clearance parameters before ledger lock-in.</p>
-      <div id="approvals-list-target" class="space-y-2 pt-2"></div>
-    </div>
-  `;
-  renderApprovalItemsList();
-}
-
-export async function syncApprovalCountBadge() {
-  try {
-    let count = 0;
-    if (AppState.role === 'admin' || AppState.role === 'purchasing') {
-      const res = await secureFetch('/api/purchasing/orders');
-      const orders = await res.json();
-      count += orders.filter(o => o.status === 'requested').length;
-    }
-    if (AppState.role === 'admin' || AppState.role === 'accounting') {
-      const res = await secureFetch('/api/accounting/disputes');
-      const disputes = await res.json();
-      count += disputes.filter(d => d.status === 'pending_review').length;
-    }
-    document.getElementById('global-approval-count').innerText = count;
-  } catch(e){}
-}
-
-async function renderApprovalItemsList() {
-  const target = document.getElementById('approvals-list-target');
-  target.innerHTML = '';
-  
-  if (AppState.role === 'purchasing' || AppState.role === 'admin') {
-    const res = await secureFetch('/api/purchasing/orders');
-    const orders = await res.json();
-    orders.filter(o => o.status === 'requested').forEach(o => {
-      const div = document.createElement('div');
-      div.className = "p-4 bg-amber-50/50 border border-amber-200 rounded-xl flex justify-between items-center text-xs";
-      div.innerHTML = `<div>📦 <b>Procurement Order Requisition:</b> ${o.item_name} (Qty: ${o.quantity_requested}) <span class="block text-[10px] text-stone-400">Submitted by: ${o.createdBy}</span></div>`;
-      const btn = document.createElement('button'); btn.className = "px-3 py-1.5 bg-stone-900 text-white font-bold rounded-lg text-[10px]"; btn.innerText = "Authorize & Order";
-      btn.onclick = async () => {
-        await secureFetch(`/api/purchasing/orders/${o._id}`, { method: 'PATCH', body: JSON.stringify({ status: 'ordered' }) });
-        showToast("Procurement request authorized."); syncApprovalCountBadge(); mountApprovalInbox();
-      };
-      div.appendChild(btn); target.appendChild(div);
-    });
-  }
-
-  if (AppState.role === 'accounting' || AppState.role === 'admin') {
-    const res = await secureFetch('/api/accounting/disputes');
-    const disputes = await res.json();
-    disputes.filter(d => d.status === 'pending_review').forEach(d => {
-      const div = document.createElement('div');
-      div.className = "p-4 bg-amber-50/50 border border-amber-200 rounded-xl flex justify-between items-center text-xs";
-      div.innerHTML = `<div>🧾 <b>Financial Account Dispute Notice:</b> Room ${d.room_number} ($${d.disputed_amount}) <span class="block text-[10px] text-stone-400">Filed by: ${d.loggedBy} | Reason: "${d.reason}"</span></div>`;
-      const btn = document.createElement('button'); btn.className = "px-3 py-1.5 bg-stone-900 text-white font-bold rounded-lg text-[10px]"; btn.innerText = "Approve Financial Write-off";
-      btn.onclick = async () => {
-        await secureFetch(`/api/accounting/disputes/${d._id}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved' }) });
-        showToast("Credit correction authorized."); syncApprovalCountBadge(); mountApprovalInbox();
-      };
-      div.appendChild(btn); target.appendChild(div);
-    });
-  }
-}
-
-// Live real-time socket refresh pipelines
-socket.on('new_request', () => { if(AppState.activeModule?.refresh) AppState.activeModule.refresh(); syncApprovalCountBadge(); });
-socket.on('request_completed', () => { if(AppState.activeModule?.refresh) AppState.activeModule.refresh(); syncApprovalCountBadge(); });
+// Global WebSocket Broadcast Refresh Pipe Listener Loops
+socket.on('new_request', () => {
+  Object.values(AppState.modules).forEach(mod => { if (mod.refresh) mod.refresh(); });
+});
+socket.on('request_completed', () => {
+  Object.values(AppState.modules).forEach(mod => { if (mod.refresh) mod.refresh(); });
+});
