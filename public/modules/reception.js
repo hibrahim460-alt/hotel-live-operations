@@ -9,12 +9,11 @@ export function init(formElement, viewElement) {
 }
 
 function renderWorkspaceLayout() {
-  // PANEL A: Input Controls Container (Task Insertion + Isolated Date Filtering)
   formContainer.innerHTML = `
     <div class="space-y-5 text-stone-900">
       <div>
         <h3 class="text-indigo-600 text-xs font-black uppercase tracking-wider">🛎️ FO Management Controls</h3>
-        <p class="text-[10px] text-stone-400 mt-0.5 leading-tight">Create real-time work requests or extract isolated, clean transaction logs below.</p>
+        <p class="text-[10px] text-stone-400 mt-0.5 leading-tight">Create work requests or pull isolated historical logs below.</p>
       </div>
       
       <form id="fo-task-form" class="space-y-2 bg-stone-50 p-3 rounded-xl border border-stone-200 shadow-xs">
@@ -42,7 +41,7 @@ function renderWorkspaceLayout() {
       </form>
 
       <div class="bg-stone-900 text-white p-3 rounded-xl space-y-2 border border-stone-800 shadow-sm">
-        <span class="text-[9px] uppercase font-black tracking-wider text-indigo-400 block">📊 FO Historical Log Engine</span>
+        <span class="text-[9px] uppercase font-black tracking-wider text-indigo-400 block">📊 1-Month Archival Vault</span>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block text-[8px] uppercase font-bold text-stone-400 mb-0.5">Start Date</label>
@@ -65,16 +64,14 @@ function renderWorkspaceLayout() {
     </div>
   `;
 
-  // PANEL B: Re-engineered Viewport Matrix splitting Live views and Report outputs permanently
   viewContainer.innerHTML = `
     <div class="space-y-6">
-      
       <div class="space-y-2">
         <div class="flex justify-between items-center border-b border-stone-200 pb-1.5">
           <h4 class="text-stone-500 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Active Front Desk Queue
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Front Desk Queue (Rolling 48 Hours)
           </h4>
-          <span class="px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded text-[9px] font-mono font-bold">Auto-Syncing</span>
+          <span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[8px] font-mono font-bold uppercase tracking-wide">FIFO Active</span>
         </div>
         <div id="fo-live-queue-target" class="space-y-2 max-h-[300px] overflow-y-auto pr-1"></div>
       </div>
@@ -82,13 +79,12 @@ function renderWorkspaceLayout() {
       <div id="fo-report-vault-container" class="space-y-2 border-t border-stone-200 pt-4 hidden">
         <div class="flex justify-between items-center border-b border-stone-200 pb-1.5">
           <h4 id="fo-report-vault-title" class="text-indigo-600 text-xs font-black uppercase tracking-wider">
-            🧾 Compiled Date Range Audit Logs
+            🧾 Compiled Archive Ledger Output
           </h4>
-          <span class="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-mono font-bold uppercase tracking-wide">Report Output</span>
+          <span class="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-mono font-bold uppercase tracking-wide">Historical Report</span>
         </div>
         <div id="fo-compiled-report-target" class="space-y-2 max-h-[350px] overflow-y-auto pr-1"></div>
       </div>
-
     </div>
   `;
 
@@ -98,11 +94,9 @@ function renderWorkspaceLayout() {
 }
 
 export async function refresh() {
-  // Pull live data safely without touching or resetting any generated historical audit reports
   await fetchAndRenderLiveQueue();
 }
 
-// 1. Manages and renders the isolated, real-time streaming view list
 async function fetchAndRenderLiveQueue() {
   const container = document.getElementById('fo-live-queue-target');
   if (!container) return;
@@ -112,7 +106,7 @@ async function fetchAndRenderLiveQueue() {
     const tasks = await res.json();
 
     if (tasks.length === 0) {
-      container.innerHTML = `<div class="p-3 text-center italic text-stone-400 text-xs bg-stone-50/50 rounded-xl border border-dashed">No active operational tasks pending.</div>`;
+      container.innerHTML = `<div class="p-3 text-center italic text-stone-400 text-xs bg-stone-50/50 rounded-xl border border-dashed">No unresolved tasks or tasks closed within the last 48 hours.</div>`;
       return;
     }
 
@@ -146,18 +140,17 @@ async function fetchAndRenderLiveQueue() {
             <div>
               <span class="font-bold text-stone-500 uppercase tracking-wider block">Created:</span>
               <span class="text-stone-700">👤 ${task.createdBy}</span>
-              <div>${createdDate}</div>
+              <div>📅 ${createdDate}</div>
             </div>
             <div class="border-l border-stone-200/80 pl-2">
               <span class="font-bold text-stone-500 uppercase tracking-wider block">Resolved:</span>
-              ${!isPending ? `<span class="text-emerald-700 font-bold">👤 ${task.completedBy}</span><div>${confirmedDate}</div>` : `<span class="text-amber-600 italic">In Queue</span>`}
+              ${!isPending ? `<span class="text-emerald-700 font-bold">👤 ${task.completedBy}</span><div>📅 ${confirmedDate}</div>` : `<span class="text-amber-600 italic">In Queue</span>`}
             </div>
           </div>
         </div>
       `;
     }).join('');
 
-    // Dynamically bind live task event listeners
     tasks.forEach(task => {
       if (task.status === 'pending') {
         const btn = document.querySelector(`[data-fo-live-done-id="${task._id}"]`);
@@ -166,17 +159,16 @@ async function fetchAndRenderLiveQueue() {
     });
 
   } catch (err) {
-    console.error("Live view compilation failed:", err);
+    console.error("Live queue render error:", err);
   }
 }
 
-// 2. Compiles historical log requests and renders them inside the separate vault section
 async function compileDateRangeReport() {
   const start = document.getElementById('fo_report_start').value;
   const end = document.getElementById('fo_report_end').value;
 
   if (!start || !end) {
-    showToast("Please provide both Start and End date bounds to compile an isolated report.", "error");
+    showToast("Please provide both Start and End dates to compile the report.", "error");
     return;
   }
 
@@ -186,13 +178,19 @@ async function compileDateRangeReport() {
 
   try {
     const res = await secureFetch(`/api/requests/today?startDate=${start}&endDate=${end}`);
-    const reports = await res.json();
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      showToast(errorData.error || "Failed to retrieve historical data.", "error");
+      return;
+    }
 
+    const reports = await res.json();
     vaultTitle.innerText = `🧾 Audit Report Ledger: ${start} to ${end}`;
-    vaultContainer.classList.remove('hidden'); // Reveal the separated data viewport
+    vaultContainer.classList.remove('hidden');
 
     if (reports.length === 0) {
-      reportTarget.innerHTML = `<div class="p-4 text-center italic text-stone-400 text-xs bg-stone-50 rounded-xl border border-dashed">No archival signatures logged inside this explicit date constraint range.</div>`;
+      reportTarget.innerHTML = `<div class="p-4 text-center italic text-stone-400 text-xs bg-stone-50 rounded-xl border border-dashed">No records found within this range.</div>`;
       return;
     }
 
@@ -219,20 +217,20 @@ async function compileDateRangeReport() {
             <div>
               <span class="text-stone-500 uppercase font-bold block">Creator Sign:</span>
               <span class="text-stone-700">👤 ${task.createdBy}</span>
-              <div>${createdDate}</div>
+              <div>📅 ${createdDate}</div>
             </div>
             <div class="border-l border-indigo-100 pl-1.5">
               <span class="text-stone-500 uppercase font-bold block">Completer Sign:</span>
-              ${task.completedAt ? `<span class="text-emerald-700 font-bold">👤 ${task.completedBy}</span><div>${confirmedDate}</div>` : `<span class="text-amber-600 italic">Unresolved</span>`}
+              ${task.completedAt ? `<span class="text-emerald-700 font-bold">👤 ${task.completedBy}</span><div>📅 ${confirmedDate}</div>` : `<span class="text-amber-600 italic">Unresolved</span>`}
             </div>
           </div>
         </div>
       `;
     }).join('');
 
-    showToast(`Compiled report with ${reports.length} historical entries successfully.`, "success");
+    showToast(`Compiled report with ${reports.length} history profiles successfully.`, "success");
   } catch (err) {
-    showToast("Error extracting historical records context.", "error");
+    showToast("Error extracting records context.", "error");
   }
 }
 
@@ -241,7 +239,7 @@ function clearReportVaultView() {
   document.getElementById('fo_report_end').value = '';
   document.getElementById('fo-report-vault-container').classList.add('hidden');
   document.getElementById('fo-compiled-report-target').innerHTML = '';
-  showToast("Report historical view cleared.");
+  showToast("Report historical viewport cleared.");
 }
 
 async function handleTaskSubmit(e) {
@@ -258,11 +256,11 @@ async function handleTaskSubmit(e) {
     });
 
     if (res.ok) {
-      showToast("Task dispatched securely.", "success");
+      showToast("Task dispatched securely across networks.", "success");
       document.getElementById('fo-task-form').reset();
       refresh();
     } else {
-      showToast("Task parsing fields rejected.", "error");
+      showToast("Fields rejected by core validation arrays.", "error");
     }
   } catch (err) {
     showToast("Network delivery failure.", "error");
@@ -273,7 +271,7 @@ async function closeFrontOfficeTask(taskId) {
   try {
     const res = await secureFetch(`/api/requests/${taskId}/complete`, { method: 'PATCH' });
     if (res.ok) {
-      showToast("Front Desk task marked resolved.", "success");
+      showToast("Task marked resolved.", "success");
       refresh();
     } else {
       showToast("Failed to authorize sign-off update.", "error");
