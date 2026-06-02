@@ -181,23 +181,44 @@ function renderSubset(targetElement, dataset) {
 
 async function handleTaskSubmit(e) {
   e.preventDefault();
+  
+  // 1. Extract values correctly matching the updated HTML form element IDs
   const room_number = document.getElementById('fo_room').value.trim();
   const guest_name = document.getElementById('fo_guest').value.trim();
-  const issue_category = document.getElementById('fo_dept_category').value;
+  const issue_category = document.getElementById('fo_dept_category').value; // Corrected ID reference
   const specific_task = document.getElementById('fo_task_action').value.trim();
   const notes = document.getElementById('fo_notes').value.trim();
 
+  // 2. Client-side sanity check to block early parsing runtime defects
+  if (!room_number || !guest_name || !issue_category || !specific_task) {
+    showToast("All essential order dispatch pipeline targets must be filled.", "error");
+    return;
+  }
+
   try {
+    // 3. Dispatch secure transaction with exact JSON parameters demanded by Mongoose
     const res = await secureFetch('/api/requests', {
       method: 'POST',
-      body: JSON.stringify({ room_number, guest_name, issue_category, specific_task, notes })
+      body: JSON.stringify({ 
+        room_number, 
+        guest_name, 
+        issue_category, 
+        specific_task, 
+        notes 
+      })
     });
+
     if (res.ok) {
       showToast("Order dispatched to secure department pipeline.", "success");
       document.getElementById('fo-task-form').reset();
-      refresh();
+      refresh(); // Reloads the live operational hub feeds instantly
+    } else {
+      const serverError = await res.json();
+      showToast(`Rejected: ${serverError.error || "Fields rejected by validation models."}`, "error");
     }
-  } catch (err) { showToast("Handshake processing connection fault.", "error"); }
+  } catch (err) { 
+    showToast("Handshake processing network delivery failure.", "error"); 
+  }
 }
 
 async function closeTaskInstance(taskId) {
