@@ -16,6 +16,7 @@ function renderWorkspaceLayout() {
         <p class="text-[10px] text-stone-400 mt-0.5 leading-tight">Route and dispatch incoming guest services requests to explicit workflows.</p>
       </div>
       
+      <!-- TASK DISPATCH FORM -->
       <form id="fo-task-form" class="space-y-2 bg-stone-50 p-3 rounded-xl border border-stone-200">
         <span class="text-[9px] uppercase font-black tracking-wider text-stone-400 block mb-1">New Order Dispatch Pipeline</span>
         <div>
@@ -34,10 +35,12 @@ function renderWorkspaceLayout() {
           </select>
         </div>
 
+        <!-- DYNAMIC EXPLICIT TASK REPLACEMENT CONTAINER -->
         <div>
           <label class="block text-[8px] uppercase tracking-wider font-bold text-stone-400 mb-1">Explicit Request Option</label>
           
-          <select id="fo_task_select" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500 mb-2">
+          <!-- Dropdown view for Engineering selections -->
+          <select id="fo_task_select_maint" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500 mb-2">
             <option value="Electricity">Electricity</option>
             <option value="Lighting">Lighting</option>
             <option value="Kettle">Kettle</option>
@@ -53,7 +56,24 @@ function renderWorkspaceLayout() {
             <option value="others">Other (Type custom request below)</option>
           </select>
 
-          <input type="text" id="fo_task_custom_input" placeholder="Type custom engineering issue or general department request details..." class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500 hidden">
+          <!-- Dropdown view for Housekeeping selections -->
+          <select id="fo_task_select_housekeeping" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500 mb-2 hidden">
+            <option value="Checkout-cleaning">Checkout-cleaning</option>
+            <option value="in-house-cleaning">in-house-cleaning</option>
+            <option value="provide extra-bed">provide extra-bed</option>
+            <option value="provide baby-crib">provide baby-crib</option>
+            <option value="provide toilet-papers">provide toilet-papers</option>
+            <option value="provide bath-towels">provide bath-towels</option>
+            <option value="provide hand-towels">provide hand-towels</option>
+            <option value="provide toilet-amentias">provide toilet-amentias</option>
+            <option value="provide ironing-board">provide ironing-board</option>
+            <option value="provide extra-amenities(coffee tray, slippers, bathrobe)">provide extra-amenities(coffee tray, slippers, bathrobe)</option>
+            <option value="provide tissues">provide tissues</option>
+            <option value="others">Other (Type custom request below)</option>
+          </select>
+
+          <!-- Custom Text Field Fallback -->
+          <input type="text" id="fo_task_custom_input" placeholder="Type customized requests here..." class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500 hidden">
         </div>
 
         <div>
@@ -64,6 +84,7 @@ function renderWorkspaceLayout() {
         </button>
       </form>
 
+      <!-- HISTORICAL VAULT CONTROLLER -->
       <div class="bg-stone-900 text-white p-3 rounded-xl space-y-2 border border-stone-800">
         <span class="text-[9px] uppercase font-black tracking-wider text-indigo-400 block">📊 Target Department Audit Vault</span>
         <div class="grid grid-cols-2 gap-2">
@@ -128,47 +149,52 @@ function renderWorkspaceLayout() {
     </div>
   `;
 
-  // Attach event handlers
+  // Attach core event handlers
   document.getElementById('fo-task-form').onsubmit = handleTaskSubmit;
   document.getElementById('btn-fo-run-report').onclick = compileDateRangeReport;
   document.getElementById('btn-fo-clear-report').onclick = clearReportVaultView;
 
-  // Real-time Event UI Toggle: Handles showing/hiding dropdown vs text input based on department selection
+  // Track visibility toggles dynamically
   const deptSelect = document.getElementById('fo_dept_category');
-  const taskSelect = document.getElementById('fo_task_select');
+  const maintSelect = document.getElementById('fo_task_select_maint');
+  const hkSelect = document.getElementById('fo_task_select_housekeeping');
   const customInput = document.getElementById('fo_task_custom_input');
 
-  deptSelect.onchange = () => {
-    if (deptSelect.value === 'Engineering & Maintenance') {
-      taskSelect.classList.remove('hidden');
-      if (taskSelect.value === 'others') {
+  // Unified controller toggle engine
+  const applyFormToggles = () => {
+    const currentDept = deptSelect.value;
+
+    // Default configuration resets
+    maintSelect.classList.add('hidden');
+    hkSelect.classList.add('hidden');
+    customInput.classList.add('hidden');
+    customInput.required = false;
+
+    if (currentDept === 'Engineering & Maintenance') {
+      maintSelect.classList.remove('hidden');
+      if (maintSelect.value === 'others') {
         customInput.classList.remove('hidden');
         customInput.required = true;
-      } else {
-        customInput.classList.add('hidden');
-        customInput.required = false;
+        customInput.placeholder = "Specify other engineering issue...";
+      }
+    } else if (currentDept === 'Housekeeping Operations') {
+      hkSelect.classList.remove('hidden');
+      if (hkSelect.value === 'others') {
+        customInput.classList.remove('hidden');
+        customInput.required = true;
+        customInput.placeholder = "Specify other housekeeping request...";
       }
     } else {
-      // Automatically hide maintenance dropdown and force textual input for other departments
-      taskSelect.classList.add('hidden');
+      // General fallbacks for remaining operational modules (Front Office / F&B)
       customInput.classList.remove('hidden');
-      customInput.placeholder = `Explicit Request for ${deptSelect.value}...`;
       customInput.required = true;
+      customInput.placeholder = `Explicit Request details for ${currentDept}...`;
     }
   };
 
-  taskSelect.onchange = () => {
-    if (taskSelect.value === 'others' && deptSelect.value === 'Engineering & Maintenance') {
-      customInput.classList.remove('hidden');
-      customInput.required = true;
-      customInput.placeholder = "Specify other engineering issue...";
-    } else {
-      if (deptSelect.value === 'Engineering & Maintenance') {
-        customInput.classList.add('hidden');
-        customInput.required = false;
-      }
-    }
-  };
+  deptSelect.onchange = applyFormToggles;
+  maintSelect.onchange = applyFormToggles;
+  hkSelect.onchange = applyFormToggles;
 }
 
 export async function refresh() {
@@ -251,15 +277,14 @@ async function handleTaskSubmit(e) {
   const issue_category = document.getElementById('fo_dept_category').value;
   const notes = document.getElementById('fo_notes').value.trim();
 
-  // Determine what option to select for specific_task depending on whether department dropdown is active
+  // Dynamic assignment evaluation logic
   let specific_task = "";
   if (issue_category === 'Engineering & Maintenance') {
-    const dropdownVal = document.getElementById('fo_task_select').value;
-    if (dropdownVal === 'others') {
-      specific_task = document.getElementById('fo_task_custom_input').value.trim();
-    } else {
-      specific_task = dropdownVal;
-    }
+    const maintVal = document.getElementById('fo_task_select_maint').value;
+    specific_task = (maintVal === 'others') ? document.getElementById('fo_task_custom_input').value.trim() : maintVal;
+  } else if (issue_category === 'Housekeeping Operations') {
+    const hkVal = document.getElementById('fo_task_select_housekeeping').value;
+    specific_task = (hkVal === 'others') ? document.getElementById('fo_task_custom_input').value.trim() : hkVal;
   } else {
     specific_task = document.getElementById('fo_task_custom_input').value.trim();
   }
@@ -285,8 +310,9 @@ async function handleTaskSubmit(e) {
       showToast("Order dispatched to secure department pipeline.", "success");
       document.getElementById('fo-task-form').reset();
       
-      // Make sure view resets states neatly after standard reset sequence
-      document.getElementById('fo_task_select').classList.remove('hidden');
+      // Reset visible states neatly
+      document.getElementById('fo_task_select_maint').classList.remove('hidden');
+      document.getElementById('fo_task_select_housekeeping').classList.add('hidden');
       document.getElementById('fo_task_custom_input').classList.add('hidden');
       document.getElementById('fo_task_custom_input').required = false;
 
