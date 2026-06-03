@@ -33,9 +33,29 @@ function renderWorkspaceLayout() {
             <option value="Food & Beverage Room Service">🍽️ Food & Beverage Room Service</option>
           </select>
         </div>
+
         <div>
-          <input type="text" id="fo_task_action" required placeholder="Explicit Request (e.g. Broken AC, Towels, Wakeup Call)" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500">
+          <label class="block text-[8px] uppercase tracking-wider font-bold text-stone-400 mb-1">Explicit Request Option</label>
+          
+          <select id="fo_task_select" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500 mb-2">
+            <option value="Electricity">Electricity</option>
+            <option value="Lighting">Lighting</option>
+            <option value="Kettle">Kettle</option>
+            <option value="AC">AC</option>
+            <option value="Toilet Back-a-dush">Toilet Back-a-dush</option>
+            <option value="Safety-box locked">Safety-box locked</option>
+            <option value="Safety-box reset">Safety-box reset</option>
+            <option value="Door configuration">Door configuration</option>
+            <option value="Wi-Fi">Wi-Fi</option>
+            <option value="Socket">Socket</option>
+            <option value="Fridge">Fridge</option>
+            <option value="Windows">Windows</option>
+            <option value="others">Other (Type custom request below)</option>
+          </select>
+
+          <input type="text" id="fo_task_custom_input" placeholder="Type custom engineering issue or general department request details..." class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500 hidden">
         </div>
+
         <div>
           <textarea id="fo_notes" rows="2" placeholder="Additional details/notes..." class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500"></textarea>
         </div>
@@ -108,9 +128,47 @@ function renderWorkspaceLayout() {
     </div>
   `;
 
+  // Attach event handlers
   document.getElementById('fo-task-form').onsubmit = handleTaskSubmit;
   document.getElementById('btn-fo-run-report').onclick = compileDateRangeReport;
   document.getElementById('btn-fo-clear-report').onclick = clearReportVaultView;
+
+  // Real-time Event UI Toggle: Handles showing/hiding dropdown vs text input based on department selection
+  const deptSelect = document.getElementById('fo_dept_category');
+  const taskSelect = document.getElementById('fo_task_select');
+  const customInput = document.getElementById('fo_task_custom_input');
+
+  deptSelect.onchange = () => {
+    if (deptSelect.value === 'Engineering & Maintenance') {
+      taskSelect.classList.remove('hidden');
+      if (taskSelect.value === 'others') {
+        customInput.classList.remove('hidden');
+        customInput.required = true;
+      } else {
+        customInput.classList.add('hidden');
+        customInput.required = false;
+      }
+    } else {
+      // Automatically hide maintenance dropdown and force textual input for other departments
+      taskSelect.classList.add('hidden');
+      customInput.classList.remove('hidden');
+      customInput.placeholder = `Explicit Request for ${deptSelect.value}...`;
+      customInput.required = true;
+    }
+  };
+
+  taskSelect.onchange = () => {
+    if (taskSelect.value === 'others' && deptSelect.value === 'Engineering & Maintenance') {
+      customInput.classList.remove('hidden');
+      customInput.required = true;
+      customInput.placeholder = "Specify other engineering issue...";
+    } else {
+      if (deptSelect.value === 'Engineering & Maintenance') {
+        customInput.classList.add('hidden');
+        customInput.required = false;
+      }
+    }
+  };
 }
 
 export async function refresh() {
@@ -125,7 +183,6 @@ async function fetchAndRenderLiveLayouts() {
 
   if (!mTarget) return;
 
-  // Clear targets to prevent overlapping traces
   mTarget.innerHTML = hTarget.innerHTML = rTarget.innerHTML = fTarget.innerHTML = 
     `<span class="text-[10px] italic text-stone-400">No active workflows queued.</span>`;
 
@@ -192,8 +249,20 @@ async function handleTaskSubmit(e) {
   const room_number = document.getElementById('fo_room').value.trim();
   const guest_name = document.getElementById('fo_guest').value.trim();
   const issue_category = document.getElementById('fo_dept_category').value;
-  const specific_task = document.getElementById('fo_task_action').value.trim();
   const notes = document.getElementById('fo_notes').value.trim();
+
+  // Determine what option to select for specific_task depending on whether department dropdown is active
+  let specific_task = "";
+  if (issue_category === 'Engineering & Maintenance') {
+    const dropdownVal = document.getElementById('fo_task_select').value;
+    if (dropdownVal === 'others') {
+      specific_task = document.getElementById('fo_task_custom_input').value.trim();
+    } else {
+      specific_task = dropdownVal;
+    }
+  } else {
+    specific_task = document.getElementById('fo_task_custom_input').value.trim();
+  }
 
   if (!room_number || !guest_name || !issue_category || !specific_task) {
     showToast("All essential order dispatch pipeline targets must be filled.", "error");
@@ -215,6 +284,12 @@ async function handleTaskSubmit(e) {
     if (res.ok) {
       showToast("Order dispatched to secure department pipeline.", "success");
       document.getElementById('fo-task-form').reset();
+      
+      // Make sure view resets states neatly after standard reset sequence
+      document.getElementById('fo_task_select').classList.remove('hidden');
+      document.getElementById('fo_task_custom_input').classList.add('hidden');
+      document.getElementById('fo_task_custom_input').required = false;
+
       refresh(); 
     } else {
       const serverError = await res.json();
