@@ -1,13 +1,11 @@
 // public/app.js
 // Central Real-Time Operating Engine Matrix Control Hub
 
-// Initialize dynamic communication link to the backend server
 const socket = io();
 
-// Core Architecture State Registry
 let currentUserSessionToken = null;
 
-// DOM Element Selectors
+// DOM Selectors
 const authGatePanel = document.getElementById('auth-gate');
 const systemWorkspaceShell = document.getElementById('workspace-shell');
 const coreLoginForm = document.getElementById('login-form');
@@ -15,7 +13,7 @@ const platformUserBadge = document.getElementById('user-badge');
 const logoutActionBtn = document.getElementById('logout-btn');
 
 // -------------------------------------------------------------------------
-// 🔐 SESSION GATE & USER AUTHENTICATION
+// 🔐 SECURE SESSION ENTRY GATEWAYS
 // -------------------------------------------------------------------------
 if (coreLoginForm) {
   coreLoginForm.addEventListener('submit', (event) => {
@@ -32,22 +30,19 @@ if (coreLoginForm) {
     if (userHandleValue !== "" && securityKeyValue !== "") {
       currentUserSessionToken = userHandleValue;
       
-      // Update User Identity Badge display text
       if (platformUserBadge) {
         platformUserBadge.innerText = `SYSTEM PROFILE: ${userHandleValue.toUpperCase()}`;
       }
       
-      // Toggle view screens smoothly
       if (authGatePanel) authGatePanel.classList.add('hidden');
       if (systemWorkspaceShell) systemWorkspaceShell.classList.remove('hidden');
       
-      // Notify the server engine of the new session connection
+      // Initialize pipeline session hooks safely
       socket.emit('system:initialize-session', { 
         handle: currentUserSessionToken,
         timestamp: Date.now() 
       });
       
-      // Instantly request the core dashboard live feed data dump
       socket.emit('request:fetch-live-feed');
     }
   });
@@ -56,21 +51,55 @@ if (coreLoginForm) {
 if (logoutActionBtn) {
   logoutActionBtn.addEventListener('click', () => {
     currentUserSessionToken = null;
-    
-    // Clean out the form string parameters
     document.getElementById('login-user').value = '';
     document.getElementById('login-pass').value = '';
     
     if (systemWorkspaceShell) systemWorkspaceShell.classList.add('hidden');
     if (authGatePanel) authGatePanel.classList.remove('hidden');
+    
+    switchAppTab('reception');
   });
 }
 
 // -------------------------------------------------------------------------
-// 🌐 NATIVE RECEPTION PANEL DATA CONTROLLERS & ACTIONS
+// 🎛️ TAB SWITCHING ENGINE NAVIGATION CONTROLLER
 // -------------------------------------------------------------------------
+window.switchAppTab = function(targetTabName) {
+  // Hide all view panel wrappers cleanly
+  document.querySelectorAll('.tab-panel').forEach(panel => {
+    panel.classList.add('hidden');
+  });
+  
+  // Remove selection design styles from all navbar links
+  const navigationButtons = ['reception', 'housekeeping', 'logbook', 'maintenance'];
+  navigationButtons.forEach(btnName => {
+    const btnElement = document.getElementById(`tab-btn-${btnName}`);
+    if (btnElement) {
+      btnElement.classList.remove('bg-white', 'text-stone-900', 'shadow-xs', 'font-black');
+      btnElement.classList.add('text-stone-500', 'font-bold');
+    }
+  });
+  
+  // Reveal the selected panel container viewport
+  const targetedPanel = document.getElementById(`view-panel-${targetTabName}`);
+  if (targetedPanel) targetedPanel.classList.remove('hidden');
+  
+  // Enforce active styling definitions on selected navbar trigger button
+  const targetedBtn = document.getElementById(`tab-btn-${targetTabName}`);
+  if (targetedBtn) {
+    targetedBtn.classList.remove('text-stone-500', 'font-bold');
+    targetedBtn.classList.add('bg-white', 'text-stone-900', 'shadow-xs', 'font-black');
+  }
 
-// Submit a freshly built front office dispatch down the socket pipe
+  // If entering the reception area, request fresh data down the stream line immediately
+  if (targetTabName === 'reception') {
+    socket.emit('request:fetch-live-feed');
+  }
+};
+
+// -------------------------------------------------------------------------
+// 🌐 REAL-TIME ACTIONS & FORM EMISSIONS
+// -------------------------------------------------------------------------
 window.transmitNativeDispatch = function() {
   const areaTargetLocation = document.getElementById('native-dispatch-location');
   const serviceTargetNotes = document.getElementById('native-dispatch-notes');
@@ -85,28 +114,24 @@ window.transmitNativeDispatch = function() {
     unixTimestamp: Date.now()
   };
   
-  // Send data to the background database stream
   socket.emit('action:create-dispatch', formattedPacket);
   
-  // Wipe text inputs clean instantly
   areaTargetLocation.value = '';
   serviceTargetNotes.value = '';
 };
 
-// Resolve an active dispatch request
 window.resolveNativeDispatch = function(ticketUniqueRecordId) {
   if (!ticketUniqueRecordId) return;
   socket.emit('action:resolve-dispatch', { id: ticketUniqueRecordId });
 };
 
 // -------------------------------------------------------------------------
-// ⚡ CENTRAL STREAMING WEBSOCKET RESPONSIVE LISTENERS
+// ⚡ CENTRAL STREAMING WEBSOCKET LISTENERS
 // -------------------------------------------------------------------------
 socket.on('connect', () => {
   console.log('⚡ Central System Connection Link Secured.');
 });
 
-// Build the Front Desk input forms dynamically inside Zone A
 socket.on('feed:render-input-controls', (payloadData) => {
   const coreInputTargetContainer = document.getElementById('module-input-target');
   if (!coreInputTargetContainer) return;
@@ -129,7 +154,6 @@ socket.on('feed:render-input-controls', (payloadData) => {
   `;
 });
 
-// Render the incoming data records dynamically inside Zone B
 socket.on('feed:update-display-dashboard', (receivedStreamPayload) => {
   const coreDisplayTargetContainer = document.getElementById('module-display-target');
   if (!coreDisplayTargetContainer) return;
