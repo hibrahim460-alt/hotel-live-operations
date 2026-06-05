@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -21,16 +20,13 @@ if (!MONGODB_URI) {
 }
 
 mongoose.connect(MONGODB_URI)
-  .then(async () => {
-    console.log('🚀 MongoDB Cluster Active with Multi-Department Segregated Routing');
-    await initializeMasterAccounts();
-  })
+  .then(() => console.log('🚀 MongoDB Cluster Active with Multi-Department Segregated Routing'))
   .catch(err => console.error('❌ MongoDB Connection Failure:', err));
 
 // --- DATA SCHEMAS ---
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: mongoose.Schema.Types.Mixed, required: true }, // Mixed data type handles both number 111 and string "111" smoothly
+  password: { type: String, required: true }, 
   role: { type: String, required: true, enum: ['admin', 'executive', 'operations', 'reception', 'maintenance', 'housekeeping', 'purchasing', 'reservations', 'accounting', 'sales'] }
 });
 const User = mongoose.model('User', userSchema);
@@ -38,18 +34,18 @@ const User = mongoose.model('User', userSchema);
 const requestSchema = new mongoose.Schema({
   guest_name: { type: String, required: true },
   room_number: { type: String, required: true },
-  issue_category: { type: String, required: true }, 
-  specific_task: { type: String, required: true },  
+  issue_category: { type: String, required: true }, // e.g., 'Engineering & Maintenance', 'Housekeeping Operations', 'Front Office & Concierge', 'Food & Beverage Room Service'
+  specific_task: { type: String, required: true },  // e.g., 'AC Repair', 'Fresh Linen'
   notes: { type: String, default: "" },
   status: { type: String, default: 'pending' }, 
   timestamp: { type: Date, default: Date.now }, 
-  completedAt: { type: Date },                     
+  completedAt: { type: Date },                  
   createdBy: { type: String, required: true },    
   completedBy: { type: String, default: "" }      
 });
 const Request = mongoose.model('Request', requestSchema);
 
-// Additional models kept intact for absolute architectural integrity
+// Other models kept intact for absolute architectural integrity
 const inventorySchema = new mongoose.Schema({ item_name: String, quantity_requested: Number, department: String, status: { type: String, default: 'requested' }, timestamp: { type: Date, default: Date.now }, createdBy: String, completedBy: String, completedAt: Date });
 const InventoryOrder = mongoose.model('InventoryOrder', inventorySchema);
 const disputeSchema = new mongoose.Schema({ room_number: String, disputed_amount: Number, reason: String, status: { type: String, default: 'pending_review' }, loggedBy: String, reviewedBy: String, timestamp: { type: Date, default: Date.now }, completedAt: Date });
@@ -58,31 +54,6 @@ const leadSchema = new mongoose.Schema({ company_name: String, contact_person: S
 const Lead = mongoose.model('Lead', leadSchema);
 const reservationSchema = new mongoose.Schema({ guest_name: String, room_number: String, arrival_date: String, vip_tier: { type: String, default: 'Standard' }, special_amenities: String, timestamp: { type: Date, default: Date.now }, createdBy: String });
 const Reservation = mongoose.model('Reservation', reservationSchema);
-
-// --- 🔐 AUTOMATIC USER ACCOUNT SEEDING LOGIC ---
-async function initializeMasterAccounts() {
-  try {
-    const masterSeedUsers = [
-      { username: 'admin', password: '111', role: 'admin' },
-      { username: 'reception', password: 'receptionpass2026', role: 'reception' },
-      { username: 'housekeeping', password: 'hkpass2026', role: 'housekeeping' },
-      { username: 'maintenance', password: 'maintenancemod2026', role: 'maintenance' },
-      { username: 'operations', password: 'opscorekey2026', role: 'operations' }
-    ];
-
-    for (const masterAccount of masterSeedUsers) {
-      const accountExists = await User.findOne({ username: masterAccount.username });
-      if (!accountExists) {
-        const newStaffUser = new User(masterAccount);
-        await newStaffUser.save();
-        console.log(`✨ AUTO-CREATED ACCOUNT -> User: [${masterAccount.username.toUpperCase()}] | Role: [${masterAccount.role.toUpperCase()}]`);
-      }
-    }
-    console.log('🟢 System Access Profiles are fully initialized and synced.');
-  } catch (err) {
-    console.error('❌ Failed to verify or inject default master accounts:', err);
-  }
-}
 
 // --- MIDDLEWARES ---
 app.use(express.json());
@@ -106,31 +77,23 @@ function verifyHighTierClearance(req, res, next) {
   next();
 }
 
-// --- HTTP AUTHENTICATION ---
+// --- AUTHENTICATION ---
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Missing input handle credentials.' });
-
     const user = await User.findOne({ username: username.toLowerCase() });
-    
-    // FIX: String conversion prevents JavaScript strict validation from failing type tests
-    if (!user || String(user.password).trim() !== String(password).trim()) {
-      return res.status(401).json({ error: 'Invalid security key credentials.' });
-    }
-
+    if (!user || user.password !== password) return res.status(401).json({ error: 'Invalid parameters.' });
     const token = jwt.sign({ username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, role: user.role, username: user.username });
-  } catch (err) { 
-    res.status(500).json({ error: 'System processing fault.' }); 
-  }
+  } catch (err) { res.status(500).json({ error: 'System fault.' }); }
 });
 
-// --- 🛎️ DISPATCH WORK QUEUES ---
+// --- 🛎️ DISPATCH WORK QUEUES (EXPLICIT SEGREGATION & FILTER MATRIX) ---
 app.get('/api/requests/today', authenticateToken, async (req, res) => {
   try {
     const { startDate, endDate, departmentFilter } = req.query;
 
+    // A. Historical Date Report Endpoint (Scoped to 1-month retention limit)
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -148,13 +111,16 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
       return res.json(await Request.find(query).sort({ timestamp: -1 }));
     }
 
-    const rollingCleanLimit = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); 
+    // B. Smart Dynamic Live Redirection Filter Core
+    const rollingCleanLimit = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 48 Hours
+
     let pipelineFilter = {};
 
+    // Segment data cleanly based on which department user role is loading the view
     if (req.user.role === 'maintenance') {
       pipelineFilter = { 
         issue_category: 'Engineering & Maintenance',
-        $or: [{ status: 'pending' }, { status: 'completed' }]
+        $or: [{ status: 'pending' }, { status: 'completed' }] // Maintenance keeps history visible
       };
     } else if (req.user.role === 'housekeeping') {
       pipelineFilter = {
@@ -162,6 +128,7 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
         $or: [{ status: 'pending' }, { status: 'completed' }]
       };
     } else {
+      // Reception / Operations / Generic users get the auto-clean layout rules
       pipelineFilter = {
         $or: [
           { status: 'pending' },
@@ -194,7 +161,7 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Patch trace fault.' }); }
 });
 
-// --- BI, ADMINISTRATION & OTHER ENDPOINTS ---
+// --- BI, ADMINISTRATION & OTHER ENDPOINTS (UNALTERED LOGIC FOR ARCHITECTURE STABILITY) ---
 app.get('/api/bi/analytics', authenticateToken, verifyHighTierClearance, async (req, res) => {
   try {
     const ops = await Request.aggregate([{ $facet: { total: [{ $count: "count" }], pending: [{ $match: { status: "pending" } }, { $count: "count" }] } }]);
@@ -211,84 +178,6 @@ app.get('/api/reservations', authenticateToken, async (req, res) => { res.json(a
 app.post('/api/reservations', authenticateToken, async (req, res) => { const doc = new Reservation({ ...req.body, createdBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
 app.get('/api/sales/leads', authenticateToken, async (req, res) => { res.json(await Lead.find()); });
 app.post('/api/sales/leads', authenticateToken, async (req, res) => { const doc = new Lead({ ...req.body, createdBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
-
-// --- ⚡ WEBSOCKET INTERACTION MATRIX HUB ⚡ ---
-io.on('connection', (socket) => {
-  console.log('📡 Gateway Link Connected via WebSockets.');
-
-  socket.on('system:initialize-session', async (data) => {
-    try {
-      const targetUser = data.handle ? data.handle.toLowerCase() : '';
-      const dbRecord = await User.findOne({ username: targetUser });
-      
-      if (dbRecord) {
-        socket.assignedUser = dbRecord.username;
-        socket.assignedRole = dbRecord.role;
-        console.log(`🔐 Socket Session Authorized for Account: [${dbRecord.username.toUpperCase()}] Role: [${dbRecord.role}]`);
-      } else {
-        socket.assignedUser = targetUser || 'front_office_agent';
-        socket.assignedRole = 'reception';
-        console.log(`⚠️ Unknown User Handle "${targetUser}". Initialized with default RECEPTION parameters.`);
-      }
-
-      socket.emit('feed:render-input-controls', { role: socket.assignedRole });
-    } catch (err) {
-      console.error('Socket authentication processing failure:', err);
-    }
-  });
-
-  socket.on('request:fetch-live-feed', async () => {
-    try {
-      const userRole = socket.assignedRole || 'reception';
-      let pipelineFilter = {};
-
-      if (userRole === 'maintenance') {
-        pipelineFilter = { issue_category: 'Engineering & Maintenance' };
-      } else if (userRole === 'housekeeping') {
-        pipelineFilter = { issue_category: 'Housekeeping Operations' };
-      } else {
-        pipelineFilter = {};
-      }
-
-      const matchingTasks = await Request.find(pipelineFilter).sort({ timestamp: -1 }).limit(50);
-      
-      socket.emit('feed:update-display-dashboard', { 
-        items: matchingTasks.map(task => ({
-          id: task._id,
-          location: task.room_number || 'Lobby',
-          notes: `${task.specific_task} - ${task.notes || ''}`,
-          timestamp: new Date(task.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }))
-      });
-    } catch (err) {
-      console.error('Socket data stream crawling failure:', err);
-    }
-  });
-
-  socket.on('action:create-dispatch', async (data) => {
-    try {
-      const newTicket = new Request({
-        guest_name: 'Walk-In / Guest',
-        room_number: data.location || 'Generic Area',
-        issue_category: socket.assignedRole === 'maintenance' ? 'Engineering & Maintenance' : (socket.assignedRole === 'housekeeping' ? 'Housekeeping Operations' : 'Front Office & Concierge'),
-        specific_task: 'Operational Task Order',
-        notes: data.notes,
-        createdBy: socket.assignedUser || 'Operator'
-      });
-      await newTicket.save();
-      
-      io.emit('new_request', newTicket);
-      io.emit('request:fetch-live-feed');
-    } catch (err) {
-      console.error('Failed to create socket request:', err);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('❌ Gateway Link Dropped.');
-  });
-});
-
 app.get('*', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
 server.listen(PORT, () => console.log(`🚀 Segregated Core Active on Port ${PORT}`));
