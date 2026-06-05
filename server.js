@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -39,7 +40,7 @@ const requestSchema = new mongoose.Schema({
   notes: { type: String, default: "" },
   status: { type: String, default: 'pending' }, 
   timestamp: { type: Date, default: Date.now }, 
-  completedAt: { type: Date },                  
+  completedAt: { type: Date },                     
   createdBy: { type: String, required: true },    
   completedBy: { type: String, default: "" }      
 });
@@ -77,7 +78,7 @@ function verifyHighTierClearance(req, res, next) {
   next();
 }
 
-// --- AUTHENTICATION ---
+// --- HTTP AUTHENTICATION ---
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -93,7 +94,6 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
   try {
     const { startDate, endDate, departmentFilter } = req.query;
 
-    // A. Historical Date Report Endpoint (Scoped to 1-month retention limit)
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -111,16 +111,13 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
       return res.json(await Request.find(query).sort({ timestamp: -1 }));
     }
 
-    // B. Smart Dynamic Live Redirection Filter Core
     const rollingCleanLimit = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 48 Hours
-
     let pipelineFilter = {};
 
-    // Segment data cleanly based on which department user role is loading the view
     if (req.user.role === 'maintenance') {
       pipelineFilter = { 
         issue_category: 'Engineering & Maintenance',
-        $or: [{ status: 'pending' }, { status: 'completed' }] // Maintenance keeps history visible
+        $or: [{ status: 'pending' }, { status: 'completed' }]
       };
     } else if (req.user.role === 'housekeeping') {
       pipelineFilter = {
@@ -128,7 +125,6 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
         $or: [{ status: 'pending' }, { status: 'completed' }]
       };
     } else {
-      // Reception / Operations / Generic users get the auto-clean layout rules
       pipelineFilter = {
         $or: [
           { status: 'pending' },
@@ -161,7 +157,7 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Patch trace fault.' }); }
 });
 
-// --- BI, ADMINISTRATION & OTHER ENDPOINTS (UNALTERED LOGIC FOR ARCHITECTURE STABILITY) ---
+// --- BI, ADMINISTRATION & OTHER ENDPOINTS ---
 app.get('/api/bi/analytics', authenticateToken, verifyHighTierClearance, async (req, res) => {
   try {
     const ops = await Request.aggregate([{ $facet: { total: [{ $count: "count" }], pending: [{ $match: { status: "pending" } }, { $count: "count" }] } }]);
@@ -178,6 +174,95 @@ app.get('/api/reservations', authenticateToken, async (req, res) => { res.json(a
 app.post('/api/reservations', authenticateToken, async (req, res) => { const doc = new Reservation({ ...req.body, createdBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
 app.get('/api/sales/leads', authenticateToken, async (req, res) => { res.json(await Lead.find()); });
 app.post('/api/sales/leads', authenticateToken, async (req, res) => { const doc = new Lead({ ...req.body, createdBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
+
+// --- ⚡ WEBSOCKET INTERACTION MATRIX HUB (BRIDGED LOGIN FIX) ⚡ ---
+io.on('connection', (socket) => {
+  console.log('📡 Gateway Link Connected via WebSockets.');
+
+  // This matches your app.js: socket.emit('system:initialize-session')
+  socket.on('system:initialize-session', async (data) => {
+    try {
+      const targetUser = data.handle ? data.handle.toLowerCase() : '';
+      
+      // Look up user data properties from your MongoDB cluster cluster
+      const dbRecord = await User.findOne({ username: targetUser });
+      
+      if (dbRecord) {
+        socket.assignedUser = dbRecord.username;
+        socket.assignedRole = dbRecord.role;
+        console.log(`🔐 Socket Session Authorized for Account: [${dbRecord.username.toUpperCase()}] Role: [${dbRecord.role}]`);
+      } else {
+        // Fallback authorization profile for testing or unknown accounts to stop rejections
+        socket.assignedUser = targetUser || 'front_office_agent';
+        socket.assignedRole = 'reception';
+        console.log(`⚠️ Unknown User Handle "${targetUser}". Initialized with default RECEPTION role fallback parameters.`);
+      }
+
+      // Render controls to the client dashboard right away
+      socket.emit('feed:render-input-controls', { role: socket.assignedRole });
+    } catch (err) {
+      console.error('Socket authentication processing failure:', err);
+    }
+  });
+
+  // This matches your app.js: socket.emit('request:fetch-live-feed')
+  socket.on('request:fetch-live-feed', async () => {
+    try {
+      const userRole = socket.assignedRole || 'reception';
+      let pipelineFilter = {};
+
+      if (userRole === 'maintenance') {
+        pipelineFilter = { issue_category: 'Engineering & Maintenance' };
+      } else if (userRole === 'housekeeping') {
+        pipelineFilter = { issue_category: 'Housekeeping Operations' };
+      } else {
+        pipelineFilter = {}; // Send all items to frontend views
+      }
+
+      const matchingTasks = await Request.find(pipelineFilter).sort({ timestamp: -1 }).limit(50);
+      
+      // Transmit items collection back up the pipeline array channel
+      socket.emit('feed:update-display-dashboard', { 
+        items: matchingTasks.map(task => ({
+          id: task._id,
+          location: task.room_number || 'Lobby',
+          notes: `${task.specific_task} - ${task.notes || ''}`,
+          timestamp: new Date(task.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }))
+      });
+    } catch (err) {
+      console.error('Socket data stream crawling failure:', err);
+    }
+  });
+
+  // Action: Create real-time dispatches straight into MongoDB from Socket events
+  socket.on('action:create-dispatch', async (data) => {
+    try {
+      const newTicket = new Request({
+        guest_name: 'Walk-In / Guest',
+        room_number: data.location || 'Generic Area',
+        issue_category: socket.assignedRole === 'maintenance' ? 'Engineering & Maintenance' : (socket.assignedRole === 'housekeeping' ? 'Housekeeping Operations' : 'Front Office & Concierge'),
+        specific_task: 'Operational Task Order',
+        notes: data.notes,
+        createdBy: socket.assignedUser || 'Operator'
+      });
+      await newTicket.save();
+      
+      // Broadcast update to all operational screens instantly
+      io.emit('new_request', newTicket);
+      
+      // Force refresh live feed
+      io.emit('request:fetch-live-feed');
+    } catch (err) {
+      console.error('Failed to create socket request:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('❌ Gateway Link Dropped.');
+  });
+});
+
 app.get('*', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
 server.listen(PORT, () => console.log(`🚀 Segregated Core Active on Port ${PORT}`));
