@@ -115,11 +115,17 @@ app.post('/api/auth/login', async (req, res) => {
     if (!username || !password) return res.status(400).json({ error: 'Missing input handle credentials.' });
 
     const user = await User.findOne({ username: username.toLowerCase() });
-    if (!user || user.password !== password) return res.status(401).json({ error: 'Invalid security key credentials.' });
+    
+    // FIX: String(user.password) forces a string comparison so numbers like 111 match "111" perfectly
+    if (!user || String(user.password) !== String(password)) {
+      return res.status(401).json({ error: 'Invalid security key credentials.' });
+    }
 
     const token = jwt.sign({ username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, role: user.role, username: user.username });
-  } catch (err) { res.status(500).json({ error: 'System processing fault.' }); }
+  } catch (err) { 
+    res.status(500).json({ error: 'System processing fault.' }); 
+  }
 });
 
 // --- 🛎️ DISPATCH WORK QUEUES (EXPLICIT SEGREGATION & FILTER MATRIX) ---
