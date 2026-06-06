@@ -1,3 +1,7 @@
+// =========================================================================
+// ADMINISTRATIVE PRIVILEGES MATRIX & IDENTITY ACCESS INTERACTION KERNEL
+// =========================================================================
+
 import { secureFetch, showToast } from '../app.js';
 let formContainer, viewContainer;
 
@@ -106,10 +110,37 @@ function renderWorkspaceLayout() {
 export async function refresh() {
   try {
     const res = await secureFetch('/api/admin/users'); 
+    
+    // Intercept error states (such as 401 Unauthorized or 403 Forbidden)
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      renderUnauthorizedMessage(errorData.error || `Server Error (${res.status})`);
+      return;
+    }
+
     const users = await res.json() || [];
     renderRosterElementList(users);
   } catch(err) {
     console.error("Roster retrieval fault error context trace:", err);
+    renderUnauthorizedMessage("Network connectivity barrier or server offline.");
+  }
+}
+
+function renderUnauthorizedMessage(reason) {
+  if (formContainer && viewContainer) {
+    formContainer.innerHTML = `
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-stone-900 space-y-2 shadow-sm">
+        <h3 class="text-xs font-black uppercase tracking-wider text-amber-800">🔒 Session Required</h3>
+        <p class="text-[10px] text-stone-600 leading-normal">Your environment credentials could not verify access to the core database registers.</p>
+        <div class="pt-1 text-[9px] font-mono text-amber-700 bg-amber-100/50 p-1.5 rounded border border-amber-200/60">Reason: ${reason}</div>
+      </div>
+    `;
+    
+    viewContainer.innerHTML = `
+      <div class="p-8 text-center text-xs text-stone-400 italic bg-white border border-dashed border-stone-200 rounded-xl">
+        Workspace locked. Ensure your system profile session holds a valid authorization token to access this tracking context.
+      </div>
+    `;
   }
 }
 
