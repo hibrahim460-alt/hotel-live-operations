@@ -155,7 +155,38 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Patch trace fault.' }); }
 });
 
-// --- Live Aggregation Pipeline Engine for BI Panel ---
+// --- HISTORY CLEAN ENGINE (VERSION 1.1) ---
+app.delete('/api/requests/clean', authenticateToken, async (req, res) => {
+  try {
+    let purgeFilter = { status: 'completed' }; // Absolute constraint: never clear pending
+
+    // Exec Level Override (Admin, CEO, COO) - Global Wipe of completed items
+    if (['admin', 'executive', 'operations'].includes(req.user.role)) {
+      const outcome = await Request.deleteMany(purgeFilter);
+      io.emit('new_request');
+      return res.json({ message: `Global history clean complete. Purged ${outcome.deletedCount} completed records.` });
+    }
+
+    // Individual Department Restrictions
+    if (req.user.role === 'maintenance') {
+      purgeFilter.issue_category = 'Engineering & Maintenance';
+    } else if (req.user.role === 'housekeeping') {
+      purgeFilter.issue_category = 'Housekeeping Operations';
+    } else if (req.user.role === 'reception') {
+      purgeFilter.issue_category = 'Front Office & Concierge';
+    } else {
+      return res.status(403).json({ error: 'Your system role does not possess log clearing clearance.' });
+    }
+
+    const outcome = await Request.deleteMany(purgeFilter);
+    io.emit('new_request');
+    res.json({ message: `Department history clean complete. Purged ${outcome.deletedCount} completed records.` });
+  } catch (err) {
+    res.status(500).json({ error: 'Purge engine database transaction failure.' });
+  }
+});
+
+// --- BI ANALYTICS ---
 app.get('/api/bi/analytics', authenticateToken, verifyHighTierClearance, async (req, res) => {
   try {
     const opsData = await Request.aggregate([
@@ -217,7 +248,7 @@ app.get('/api/bi/analytics', authenticateToken, verifyHighTierClearance, async (
   }
 });
 
-// --- Dynamic Cross-Department Compiled Reporting Engine ---
+// --- REPORTS ---
 app.get('/api/reports/compiled', authenticateToken, verifyHighTierClearance, async (req, res) => {
   try {
     const { department } = req.query;
@@ -289,7 +320,6 @@ app.delete('/api/admin/users/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Catch-all route mapping
 app.get('*', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
 server.listen(PORT, () => console.log(`🚀 Centralized Segregated Core Active on Port ${PORT}`));
