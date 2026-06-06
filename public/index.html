@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WH ERP // CORE OS</title>
   
-  <!-- CRITICAL: Manifest registration linked in the head of your layout -->
-  <link rel="manifest" href="/manifest.json">
-  
-  <!-- Tailwind Utilities / Global Stylesheet Link -->
+  <!-- Tailwind Utilities Sheet Link -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-stone-950 text-stone-100 font-sans antialiased selection:bg-indigo-500/30">
@@ -19,7 +16,7 @@
     <!-- SYSTEM SIDEBAR NAVIGATION -->
     <aside class="w-64 bg-stone-900 border-r border-stone-800 p-4 flex flex-col justify-between shrink-0">
       
-      <!-- Upper Section: Roster System Navigation Links -->
+      <!-- Upper Section: Navigation Links -->
       <div class="space-y-4">
         <div class="flex items-center gap-2 px-1 py-2 border-b border-stone-800">
           <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -36,17 +33,10 @@
         </nav>
       </div>
 
-      <!-- Lower Section: System Actions & Install Trigger -->
-      <div class="space-y-2 pt-4 border-t border-stone-800">
-        
-        <!-- GLOBAL COMPONENT: PWA Installation Action Link -->
-        <button id="pwa-install-btn" 
-                class="hidden w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] uppercase tracking-wider rounded-lg transition-all items-center justify-center gap-2 shadow-sm active:scale-[0.99] select-none">
-          <span>📥</span> Install Desktop Web App
-        </button>
-
+      <!-- Lower Section: System Identifier Footer -->
+      <div class="pt-4 border-t border-stone-800">
         <div class="text-[9px] text-center text-stone-500 font-mono tracking-tight">
-          v1.2 // Authorized Access Only
+          v1.1 // Authorized Access Only
         </div>
       </div>
     </aside>
