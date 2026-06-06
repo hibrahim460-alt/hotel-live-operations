@@ -2,7 +2,6 @@
 // WH ERP CORE RUNTIME CONTROLLER - VERSION 1.1 RESTORED & ALIGNED
 // =========================================================================
 
-// CORRECTION: Exact absolute path mapping to avoid resolution drops
 import * as AdminModule from '/js/modules/admin.js';
 
 // Secure Fetch abstraction framework utility wrapper
@@ -25,10 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewSlot = document.getElementById('app-view-slot');
   
   if (formSlot && viewSlot) {
-    // Fire the module's initialization function safely
     AdminModule.init(formSlot, viewSlot);
     console.log('🏁 Core UI Workspace layout initialized to Version 1.1 baseline stability.');
   } else {
-    console.error('❌ UI Frame Error: Target DOM initialization slots are missing from the current view state.');
+    console.error('❌ UI Frame Error: Target DOM initialization slots are missing from the template container.');
   }
 });
