@@ -38,7 +38,7 @@ export async function refresh() {
 
     document.getElementById('bi-ops-load').innerText = ops.total || 0;
     
-    const finSum = finance.find(f => f._id === 'pending_review')?.totalValue || 0;
+    const finSum = (finance || []).find(f => f._id === 'pending_review')?.totalValue || 0;
     document.getElementById('bi-fin-risk').innerText = `$${finSum.toLocaleString()}`;
     
     const saleSum = sales.reduce((acc, s) => acc + (s.projectedRevenue || 0), 0);
