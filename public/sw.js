@@ -1,8 +1,19 @@
-const CACHE_NAME = 'wh-hotel-v1';
+// Minimal offline service worker fallback script (sw.js)
+const CACHE_NAME = 'roster-env-v1';
+
 self.addEventListener('install', (e) => {
+  // Instantly activate the new service worker instance without waiting
   self.skipWaiting();
 });
+
+self.addEventListener('activate', (e) => {
+  // Claim all active client tabs immediately
+  e.waitUntil(clients.claim());
+});
+
 self.addEventListener('fetch', (e) => {
-  // Pass-through strategy to ensure real-time WebSockets operate dynamically
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  // Network-first execution strategy pass-through
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
 });
