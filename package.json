@@ -1,6 +1,6 @@
 {
   "name": "wh-hotel-system",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "WH Hotel Real-Time Maintenance and Permanent Historical Reporting Hub",
   "main": "server.js",
   "scripts": {
