@@ -1,7 +1,6 @@
 import { secureFetch, showToast } from '../app.js';
 let formContainer, viewContainer;
 
-// Define all system clearance flags centrally for the UI checkbox renderer
 const SYSTEM_ROLES_ARRAY = [
   { id: 'admin', label: '👑 Admin' },
   { id: 'executive', label: '📊 Exec' },
@@ -15,7 +14,6 @@ const SYSTEM_ROLES_ARRAY = [
   { id: 'reservations', label: '📅 Book' }
 ];
 
-// Track which profile ID is currently active in the modification viewport
 let currentlyEditingUserId = null;
 
 export function init(formElement, viewElement) { 
@@ -49,7 +47,7 @@ function renderWorkspaceLayout() {
           </div>
           
           <div>
-            <label class="block text-[9px] uppercase tracking-wider font-bold text-stone-400 mb-1">Clearance Allocation Strategy (Select Primary or Base Layer)</label>
+            <label class="block text-[9px] uppercase tracking-wider font-bold text-stone-400 mb-1">Clearance Allocation Strategy</label>
             <select id="adm_role" class="w-full p-2 bg-stone-800 border border-stone-700 text-white text-xs rounded-lg focus:outline-none">
               <option value="reception">🛎️ Reception</option>
               <option value="housekeeping">🧹 Housekeeping</option>
@@ -94,9 +92,9 @@ export async function refresh() {
   try {
     const res = await secureFetch('/api/admin/users'); 
     const users = await res.json();
-    document.getElementById('roster-count-badge').innerText = `${users.length} Profiles Active`;
+    document.getElementById('roster-count-badge').innerText = `${(users || []).length} Profiles Active`;
     
-    list.innerHTML = users.map(user => {
+    list.innerHTML = (users || []).map(user => {
       return `
         <div class="p-3 bg-stone-50 border border-stone-200 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div class="space-y-1">
@@ -139,8 +137,7 @@ export async function refresh() {
       `;
     }).join('');
 
-    // Attach programmatic click listeners across the dynamic elements
-    users.forEach(user => {
+    (users || []).forEach(user => {
       document.querySelector(`[data-edit-btn-id="${user._id}"]`).onclick = () => activateInlineEditState(user);
       document.querySelector(`[data-delete-btn-id="${user._id}"]`).onclick = () => triggerIdentityPurge(user._id);
     });
@@ -153,14 +150,12 @@ export async function refresh() {
 function activateInlineEditState(user) {
   currentlyEditingUserId = user._id;
   
-  // 1. Shift the Left Panel Form layout state into "Retooling" mode
   document.getElementById('form-context-title').innerText = `Retooling Profile: ${user.username}`;
   document.getElementById('adm_user').value = user.username;
-  document.getElementById('adm_user').disabled = true; // Handle ID username is immutable
+  document.getElementById('adm_user').disabled = true; 
   document.getElementById('adm_pass').value = user.password;
   document.getElementById('adm_role').value = user.role;
   
-  // 2. Adjust button arrangements for updating or resetting the selection context
   document.getElementById('form-action-button-group').innerHTML = `
     <div class="grid grid-cols-2 gap-2">
       <button type="submit" class="py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider rounded-lg transition-all">
@@ -174,19 +169,16 @@ function activateInlineEditState(user) {
   
   document.getElementById('btn-cancel-edit').onclick = resetFormToDefaultState;
   
-  // 3. Highlight the active line card item row inside the view list layout
-  document.querySelectorAll('[data-user-id]').forEach(checkbox => {
+  document.querySelectorAll('input[data-user-id]').forEach(checkbox => {
     if (checkbox.getAttribute('data-user-id') === user._id) {
       checkbox.disabled = false;
       checkbox.style.pointerEvents = 'auto';
       
-      // Update role selection options when a checkbox is toggled inside the edit window
       checkbox.onclick = (e) => {
         const checkedRole = e.target.getAttribute('data-role-id');
         document.getElementById('adm_role').value = checkedRole;
         
-        // Ensure only one checkbox checkbox remains selected per user profile row
-        document.querySelectorAll(`[data-user-id="${user._id}"]`).forEach(cb => {
+        document.querySelectorAll(`input[data-user-id="${user._id}"]`).forEach(cb => {
           if (cb.getAttribute('data-role-id') !== checkedRole) cb.checked = false;
         });
       };
@@ -220,7 +212,6 @@ async function handleFormExecution(e) {
   const role = document.getElementById('adm_role').value;
   
   if (currentlyEditingUserId) {
-    // RUNNING AN ACCOUNT MUTATION (PUT OPERATION)
     const res = await secureFetch(`/api/admin/users/${currentlyEditingUserId}`, {
       method: 'PUT',
       body: JSON.stringify({ password, role })
@@ -234,7 +225,6 @@ async function handleFormExecution(e) {
       showToast(data.error || "Profile adjustment transaction declined.", "error");
     }
   } else {
-    // PROVISIONING A NEW ENTITY DEPLOYMENT (POST OPERATION)
     const res = await secureFetch('/api/admin/users', {
       method: 'POST',
       body: JSON.stringify({ username, password, role })
@@ -252,7 +242,7 @@ async function handleFormExecution(e) {
 }
 
 async function triggerIdentityPurge(userId) {
-  if (!confirm("Confirm Account Purge: Are you sure you want to permanently delete this user credential profile from the database cluster? This action is irreversible.")) return;
+  if (!confirm("Confirm Account Purge: Irreversible operational action.")) return;
   
   try {
     const res = await secureFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
