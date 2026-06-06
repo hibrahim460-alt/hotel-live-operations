@@ -47,10 +47,13 @@ const Request = mongoose.model('Request', requestSchema);
 
 const inventorySchema = new mongoose.Schema({ item_name: String, quantity_requested: Number, department: String, status: { type: String, default: 'requested' }, timestamp: { type: Date, default: Date.now }, createdBy: String, completedBy: String, completedAt: Date });
 const InventoryOrder = mongoose.model('InventoryOrder', inventorySchema);
+
 const disputeSchema = new mongoose.Schema({ room_number: String, disputed_amount: Number, reason: String, status: { type: String, default: 'pending_review' }, loggedBy: String, reviewedBy: String, timestamp: { type: Date, default: Date.now }, completedAt: Date });
 const Dispute = mongoose.model('Dispute', disputeSchema);
+
 const leadSchema = new mongoose.Schema({ company_name: String, contact_person: String, group_rooms_needed: Number, pipeline_stage: { type: String, default: 'Inquiry' }, revenue_estimation: Number, timestamp: { type: Date, default: Date.now }, createdBy: String, completedBy: String, completedAt: Date });
 const Lead = mongoose.model('Lead', leadSchema);
+
 const reservationSchema = new mongoose.Schema({ guest_name: String, room_number: String, arrival_date: String, vip_tier: { type: String, default: 'Standard' }, special_amenities: String, timestamp: { type: Date, default: Date.now }, createdBy: String });
 const Reservation = mongoose.model('Reservation', reservationSchema);
 
@@ -158,16 +161,14 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
 // --- HISTORY CLEAN ENGINE (VERSION 1.1) ---
 app.delete('/api/requests/clean', authenticateToken, async (req, res) => {
   try {
-    let purgeFilter = { status: 'completed' }; // Absolute constraint: never clear pending
+    let purgeFilter = { status: 'completed' };
 
-    // Exec Level Override (Admin, CEO, COO) - Global Wipe of completed items
     if (['admin', 'executive', 'operations'].includes(req.user.role)) {
       const outcome = await Request.deleteMany(purgeFilter);
       io.emit('new_request');
       return res.json({ message: `Global history clean complete. Purged ${outcome.deletedCount} completed records.` });
     }
 
-    // Individual Department Restrictions
     if (req.user.role === 'maintenance') {
       purgeFilter.issue_category = 'Engineering & Maintenance';
     } else if (req.user.role === 'housekeeping') {
